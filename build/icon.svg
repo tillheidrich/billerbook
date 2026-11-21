@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c2c2e"/><stop offset="1" stop-color="#121213"/></linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2c062"/><stop offset="1" stop-color="#d3892c"/></linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fb3c9"/><stop offset="1" stop-color="#4f7a91"/></linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity="0.45"/></filter>
+    <clipPath id="lp"><path d="M232 300 Q372 268 506 300 L506 716 Q372 690 232 716 Z"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="190" fill="url(#bg)"/>
+  <g filter="url(#sh)">
+    <!-- left page: full-bleed photo -->
+    <path d="M232 300 Q372 268 506 300 L506 716 Q372 690 232 716 Z" fill="#f4f2ee"/>
+    <g clip-path="url(#lp)">
+      <rect x="220" y="260" width="300" height="470" fill="url(#sky)"/>
+      <circle cx="420" cy="380" r="46" fill="url(#amber)"/>
+      <path d="M220 640 L320 520 L392 590 L452 540 L520 610 L520 740 L220 740 Z" fill="#2f4a3a"/>
+      <path d="M220 690 L330 600 L420 660 L520 620 L520 740 L220 740 Z" fill="#1f3328"/>
+    </g>
+    <!-- right page: grid of photos -->
+    <path d="M518 300 Q652 268 792 300 L792 716 Q652 690 518 716 Z" fill="#f4f2ee"/>
+    <rect x="556" y="340" width="98" height="140" rx="4" fill="url(#amber)"/>
+    <rect x="664" y="340" width="92" height="66" rx="4" fill="#c86f4a"/>
+    <rect x="664" y="414" width="92" height="66" rx="4" fill="#7c9a74"/>
+    <rect x="556" y="492" width="200" height="150" rx="4" fill="url(#sky)"/>
+    <!-- gutter -->
+    <rect x="503" y="292" width="18" height="430" fill="#000" opacity="0.18"/>
+  </g>
+</svg>

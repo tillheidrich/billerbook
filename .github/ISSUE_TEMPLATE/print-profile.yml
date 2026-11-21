@@ -1,0 +1,12 @@
+name: Print shop profile
+description: Ask for (or contribute) a profile for a print shop
+labels: [print-profile]
+body:
+  - type: input
+    attributes: { label: Print shop }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Links to the shop's PDF specification, description: data sheets, templates or spec calculator }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Formats and bindings you need }

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billerbook</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <button class="brand" id="projBtn" title="Projekte">
+      <img src="favicon.png" alt="" width="22" height="22">
+      <span id="projName">Billerbook</span>
+    </button>
+    <nav class="editions" id="editions" aria-label="Editionen"></nav>
+    <div class="seg" id="views" role="tablist"></div>
+    <div class="top-actions">
+      <span class="status" id="status" aria-live="polite"></span>
+      <button class="btn ghost" id="autoBtn"></button>
+      <button class="btn primary" id="exportBtn"></button>
+      <button class="btn icon" id="helpBtn" title="?">?</button>
+    </div>
+  </header>
+  <main class="work">
+    <aside class="pool" id="pool"></aside>
+    <section class="stage" id="stage" tabindex="-1"></section>
+    <aside class="inspector" id="inspector"></aside>
+  </main>
+  <footer class="strip" id="strip"></footer>
+  <div id="modal-root"></div>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

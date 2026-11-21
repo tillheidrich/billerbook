@@ -1,0 +1,11 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    attributes: { label: What happened?, description: Steps, what you expected, what you got. Screenshots help. }
+    validations: { required: true }
+  - type: input
+    attributes: { label: Billerbook version and macOS version }
+  - type: input
+    attributes: { label: Print shop and format, description: e.g. WIRmachenDRUCK hardcover A4 landscape }

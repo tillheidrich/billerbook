@@ -1,0 +1,144 @@
+{
+  "name": "billerbook",
+  "version": "0.9.0",
+  "description": "Open-source photo book layout for print: one photo pool, several editions of the same book, Lightroom Classic integration, print-ready PDFs for any print shop, an MCP server for AI assistants.",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "bin": {
+    "billerbook": "server.mjs",
+    "billerbook-mcp": "mcp.mjs"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.mjs --open",
+    "dev": "node --watch server.mjs",
+    "mcp": "node --disable-warning=ExperimentalWarning mcp.mjs",
+    "app": "electron .",
+    "test": "node test/features.mjs && node --disable-warning=ExperimentalWarning test/run.mjs && node --disable-warning=ExperimentalWarning test/focal.mjs",
+    "dist:mac": "bash scripts/build-mac.sh",
+    "release:mac": "bash scripts/build-mac.sh --publish"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@pdf-lib/standard-fonts": "^1.0.0",
+    "exifr": "^7.1.3",
+    "sharp": "^0.34.0",
+    "zod": "^3.25.0",
+    "electron-updater": "^6.8.0"
+  },
+  "productName": "Billerbook",
+  "author": {
+    "name": "Till Heidrich",
+    "email": "mail@tillheidrich.de",
+    "url": "https://billerbook.heidrich-digital.de"
+  },
+  "homepage": "https://billerbook.heidrich-digital.de",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tillheidrich/billerbook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tillheidrich/billerbook/issues"
+  },
+  "keywords": [
+    "photo book",
+    "photobook",
+    "lightroom",
+    "pdf",
+    "print",
+    "layout",
+    "mcp",
+    "bleed",
+    "cmyk",
+    "yearbook"
+  ],
+  "main": "desktop/main.cjs",
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "de.heidrich-digital.billerbook",
+    "productName": "Billerbook",
+    "copyright": "© 2026 Till Heidrich",
+    "asar": false,
+    "files": [
+      "server.mjs",
+      "mcp.mjs",
+      "lib/**",
+      "public/**",
+      "desktop/**",
+      "package.json",
+      "LICENSE",
+      "!test/**",
+      "!site/**",
+      "!docs/**",
+      "!**/*.md"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.photography",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "Billerbook saves exported PDFs to your Desktop.",
+        "NSDocumentsFolderUsageDescription": "Billerbook reads photos and Lightroom catalogs you choose.",
+        "NSRemovableVolumesUsageDescription": "Billerbook reads photos and Lightroom catalogs on external drives."
+      }
+    },
+    "dmg": {
+      "title": "Billerbook ${version}",
+      "iconSize": 110,
+      "window": {
+        "width": 560,
+        "height": 360
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 180
+        },
+        {
+          "x": 410,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "artifactName": "Billerbook-${version}-${arch}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tillheidrich",
+        "repo": "billerbook",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
