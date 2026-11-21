@@ -13,7 +13,11 @@ CONTACT_EMAIL=you@example.org python3 build.py   # writes public/
 cd public && python3 -m http.server 4700
 ```
 
-`CONTACT_EMAIL` is the address on the imprint and privacy pages. In Coolify it is a build variable of the app.
+`CONTACT_EMAIL` is the address on the imprint and privacy pages. In Coolify it is a build variable of the app. Without it the pages link to the imprint on tillheidrich.de for e-mail contact.
+
+## Design
+
+Scene: someone on the sofa in December picking this year's family photos before the print shop's deadline. The page borrows from the printer's proof sheet: warm paper, ink, crop marks around every image, CMYK registration patches as dividers, one process red. The features section is dark because the app is. Type: Archivo (variable width), condensed for headlines. Copy checked against the unslop rules (no em dashes, no filler, claims only where they are tested).
 
 ## Deploy
 

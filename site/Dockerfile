@@ -4,7 +4,7 @@ ARG CONTACT_EMAIL
 WORKDIR /src
 COPY build.py ./
 COPY assets ./assets
-RUN test -n "$CONTACT_EMAIL" || (echo "CONTACT_EMAIL build variable is missing" && exit 1)
+
 RUN CONTACT_EMAIL="$CONTACT_EMAIL" python3 build.py
 
 FROM nginx:1.27-alpine
