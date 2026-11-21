@@ -3,18 +3,26 @@
 # Signing: "Developer ID Application" certificate in the login keychain.
 # Notarization: notarytool keychain profile, name in APPLE_KEYCHAIN_PROFILE (default: billerbook).
 #   xcrun notarytool store-credentials billerbook --apple-id <id> --team-id <team> --password <app-specific-password>
+# Without notarization (e.g. agreement pending): NOTARIZE=0 ./scripts/build-mac.sh
 # Publishing to GitHub Releases: ./scripts/build-mac.sh --publish  (needs GH_TOKEN, e.g. GH_TOKEN=$(gh auth token))
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export APPLE_KEYCHAIN_PROFILE="${APPLE_KEYCHAIN_PROFILE:-billerbook}"
-npm ci
+# A shell-wide NODE_ENV=production would make npm skip electron and electron-builder.
+unset NODE_ENV
+npm ci --include=dev --no-audit --no-fund
 # sharp ships one native build per CPU: add the other Mac architecture so both DMGs work.
-npm install --no-save --os=darwin --cpu=x64 @img/sharp-darwin-x64 @img/sharp-libvips-darwin-x64
-npm install --no-save --os=darwin --cpu=arm64 @img/sharp-darwin-arm64 @img/sharp-libvips-darwin-arm64
+# --force: npm refuses packages for a foreign CPU otherwise.
+npm install --no-save --force --include=dev --no-audit --no-fund \
+  @img/sharp-darwin-x64 @img/sharp-libvips-darwin-x64 \
+  @img/sharp-darwin-arm64 @img/sharp-libvips-darwin-arm64
+ls node_modules/@img/
+EXTRA=()
+if [[ "${NOTARIZE:-1}" == "0" ]]; then EXTRA+=(-c.mac.notarize=false); fi
 if [[ "${1:-}" == "--publish" ]]; then
   export GH_TOKEN="${GH_TOKEN:-$(gh auth token)}"
-  npx electron-builder --mac --publish always
+  npx electron-builder --mac --publish always ${EXTRA[@]+"${EXTRA[@]}"}
 else
-  npx electron-builder --mac --publish never
+  npx electron-builder --mac --publish never ${EXTRA[@]+"${EXTRA[@]}"}
 fi
 ls -lh dist/*.dmg dist/*.zip
