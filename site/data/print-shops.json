@@ -1,0 +1,1133 @@
+[
+ {
+  "id": "wmd",
+  "name": "WIRmachenDRUCK",
+  "region": "DE · AT · CH",
+  "url": "https://www.wir-machen-druck.de",
+  "units": "mm",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://wir-machen-druck.de/tpl/manns-partner/media/ddb/druckdatenskizzen/0/buecher_mit_hardcover_DIN_A4hoch_2.pdf",
+   "https://wir-machen-druck.de/tpl/manns-partner/media/ddb/druckdatenskizzen/category/25547/0/buecher_mit_hardcover_freies_format_1-1_2.pdf",
+   "https://www.wir-machen-druck.ch/tpl/manns-partner/media/ddb/druckdatenskizzen/category/15507/0/Bücher mit Softcover_DIN A4_1.pdf"
+  ],
+  "notes": {
+   "en": "The spine width (B) appears in the order configurator once you choose paper and page count. Billerbook estimates it until you enter that value.",
+   "de": "Die Rückenbreite (B) zeigt der Bestellkonfigurator, sobald Papier und Seitenzahl gewählt sind. Bis du sie einträgst, schätzt Billerbook."
+  },
+  "bindings": {
+   "hardcover": {
+    "status": "verified",
+    "bleed": 3,
+    "safety": 5,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 15,
+     "overW": 5,
+     "overH": 2.5,
+     "joint": 0,
+     "hinge": 7
+    },
+    "spine": {
+     "type": "printer",
+     "url": null
+    },
+    "papers": []
+   },
+   "softcover": {
+    "status": "verified",
+    "bleed": 3,
+    "safety": 5,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "printer",
+     "url": null
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 297,
+    "h": 210,
+    "label": {
+     "en": "Hardcover A4 landscape",
+     "de": "Hardcover A4 quer"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Hardcover A4 portrait",
+     "de": "Hardcover A4 hoch"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 210,
+    "label": {
+     "en": "Hardcover 21 × 21",
+     "de": "Hardcover 21 × 21"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 170,
+    "h": 240,
+    "label": {
+     "en": "Hardcover 17 × 24",
+     "de": "Hardcover 17 × 24"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 148,
+    "h": 210,
+    "label": {
+     "en": "Hardcover A5 portrait",
+     "de": "Hardcover A5 hoch"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 148,
+    "label": {
+     "en": "Hardcover A5 landscape",
+     "de": "Hardcover A5 quer"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 250,
+    "h": 250,
+    "label": {
+     "en": "Hardcover custom size",
+     "de": "Hardcover freies Format"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Softcover A4 portrait",
+     "de": "Softcover A4 hoch"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 297,
+    "h": 210,
+    "label": {
+     "en": "Softcover A4 landscape",
+     "de": "Softcover A4 quer"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 210,
+    "label": {
+     "en": "Softcover 21 × 21",
+     "de": "Softcover 21 × 21"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 148,
+    "h": 210,
+    "label": {
+     "en": "Softcover A5 portrait",
+     "de": "Softcover A5 hoch"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 125,
+    "h": 190,
+    "label": {
+     "en": "Softcover 12.5 × 19",
+     "de": "Softcover 12,5 × 19"
+    }
+   }
+  ]
+ },
+ {
+  "id": "kdp",
+  "name": "Amazon KDP",
+  "region": "Worldwide",
+  "url": "https://kdp.amazon.com",
+  "units": "in",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://kdp.amazon.com/help/topic/G201953020",
+   "https://kdp.amazon.com/help/topic/G201834560",
+   "https://kdp.amazon.com/help/topic/GDTKFJPNQCBTMRV6"
+  ],
+  "notes": {
+   "en": "Paperback: KDP publishes the spine formula, so the cover size is exact. Spine text only from 79 pages. Hardcover: KDP publishes the 15 mm wrap and the 10 mm hinge, but the full cover size only through its cover calculator. Import the template KDP generates.",
+   "de": "Paperback: KDP veröffentlicht die Rückenformel, der Umschlag stimmt also genau. Rückentext erst ab 79 Seiten. Hardcover: KDP nennt 15 mm Einschlag und 10 mm Falz, die vollständigen Umschlagmaße aber nur im eigenen Rechner. Importiere die Vorlage, die KDP erzeugt."
+  },
+  "bindings": {
+   "softcover": {
+    "status": "verified",
+    "bleed": 3.18,
+    "safety": 9.52,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": 24,
+     "max": null,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3.18,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": null,
+    "papers": [
+     {
+      "label": {
+       "en": "White paper (B&W, standard colour)",
+       "de": "Weißes Papier (S/W, Standardfarbe)"
+      },
+      "spine": "formula",
+      "maxPages": null
+     },
+     {
+      "label": {
+       "en": "Cream paper",
+       "de": "Cremefarbenes Papier"
+      },
+      "spine": "formula",
+      "maxPages": null
+     },
+     {
+      "label": {
+       "en": "Premium colour",
+       "de": "Premium-Farbe"
+      },
+      "spine": "formula",
+      "maxPages": null
+     }
+    ]
+   },
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3.18,
+    "safety": 9.52,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 15,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 10
+    },
+    "spine": null,
+    "papers": [
+     {
+      "label": {
+       "en": "White paper",
+       "de": "Weißes Papier"
+      },
+      "spine": "printer",
+      "maxPages": null
+     },
+     {
+      "label": {
+       "en": "Premium colour",
+       "de": "Premium-Farbe"
+      },
+      "spine": "printer",
+      "maxPages": null
+     }
+    ]
+   }
+  },
+  "formats": [
+   {
+    "binding": "softcover",
+    "w": 215.9,
+    "h": 215.9,
+    "label": {
+     "en": "Paperback 8.5 × 8.5 in",
+     "de": "Paperback 8.5 × 8.5 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Paperback 8.5 × 11 in",
+     "de": "Paperback 8.5 × 11 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 209.55,
+    "h": 279.4,
+    "label": {
+     "en": "Paperback 8.25 × 11 in",
+     "de": "Paperback 8.25 × 11 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Paperback A4 (8.27 × 11.69 in)",
+     "de": "Paperback A4 (8.27 × 11.69 in)"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 203.2,
+    "h": 254,
+    "label": {
+     "en": "Paperback 8 × 10 in",
+     "de": "Paperback 8 × 10 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Hardcover 8.5 × 11 in",
+     "de": "Hardcover 8.5 × 11 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 209.55,
+    "h": 279.4,
+    "label": {
+     "en": "Hardcover 8.25 × 11 in",
+     "de": "Hardcover 8.25 × 11 in"
+    }
+   }
+  ]
+ },
+ {
+  "id": "lulu",
+  "name": "Lulu",
+  "region": "Worldwide",
+  "url": "https://www.lulu.com",
+  "units": "in",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://assets.lulu.com/media/guides/en/lulu-book-creation-guide.pdf",
+   "https://help.lulu.com/en/support/solutions/articles/64000308572-creating-your-hardcover-casewrap-cover"
+  ],
+  "notes": {
+   "en": "Interior and spine width come from the Lulu Book Creation Guide (paperback formula, hardcover table). Lulu prints the casewrap 0.75 in larger than the trim; import Lulu’s cover template for the exact hardcover size.",
+   "de": "Innenteil und Rückenbreite stammen aus dem Lulu Book Creation Guide (Formel für Paperback, Tabelle für Hardcover). Den Casewrap druckt Lulu 0,75 Zoll größer als das Endformat; für das genaue Hardcover-Maß die Lulu-Vorlage importieren."
+  },
+  "bindings": {
+   "softcover": {
+    "status": "verified",
+    "bleed": 3.175,
+    "safety": 12.7,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": 32,
+     "max": 800,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3.175,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "formula",
+     "url": null
+    },
+    "papers": []
+   },
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 12.7,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": 24,
+     "max": 800,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 19.05,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 6.35
+    },
+    "spine": {
+     "type": "table",
+     "url": null
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 215.9,
+    "label": {
+     "en": "Hardcover square 8.5 × 8.5 in",
+     "de": "Hardcover square 8.5 × 8.5 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Hardcover US Letter portrait",
+     "de": "Hardcover US Letter portrait"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 279.4,
+    "h": 215.9,
+    "label": {
+     "en": "Hardcover US Letter landscape",
+     "de": "Hardcover US Letter landscape"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Hardcover A4 portrait",
+     "de": "Hardcover A4 hoch"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 297,
+    "h": 210,
+    "label": {
+     "en": "Hardcover A4 landscape",
+     "de": "Hardcover A4 quer"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 215.9,
+    "h": 215.9,
+    "label": {
+     "en": "Paperback square 8.5 × 8.5 in",
+     "de": "Paperback square 8.5 × 8.5 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Paperback US Letter portrait",
+     "de": "Paperback US Letter portrait"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 279.4,
+    "h": 215.9,
+    "label": {
+     "en": "Paperback US Letter landscape",
+     "de": "Paperback US Letter landscape"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Paperback A4 portrait",
+     "de": "Paperback A4 hoch"
+    }
+   }
+  ]
+ },
+ {
+  "id": "blurb",
+  "name": "Blurb (PDF to Book)",
+  "region": "Worldwide",
+  "url": "https://www.blurb.com/pdf-to-book",
+  "units": "in",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://www.blurb.com/book-dimensions",
+   "https://support.blurb.com/hc/en-us/articles/207792946-PDF-to-Book-specifications-and-checklist",
+   "https://www.blurb.co.uk/make/pdf_to_book/booksize_calculator"
+  ],
+  "notes": {
+   "en": "Single pages, even page count, at least 1/8 in bleed and 1/4 in safe area. Blurb asks for the exact sizes from its specification calculator (they depend on paper and page count). Import Blurb’s cover template so the ImageWrap size is exact.",
+   "de": "Einzelseiten, gerade Seitenzahl, mindestens 1/8 Zoll Beschnitt und 1/4 Zoll Sicherheitsabstand. Die genauen Maße nennt Blurb im Spezifikationsrechner (abhängig von Papier und Seitenzahl). Importiere Blurbs Umschlagvorlage, dann stimmt das ImageWrap-Maß genau."
+  },
+  "bindings": {
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 6.35,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": 20,
+     "max": 440,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 19,
+     "overW": 3.2,
+     "overH": 3.2,
+     "joint": 0,
+     "hinge": 10
+    },
+    "spine": null,
+    "papers": [
+     {
+      "label": {
+       "en": "Standard paper (up to 440 pages)",
+       "de": "Standardpapier (bis 440 Seiten)"
+      },
+      "spine": "printer",
+      "maxPages": null
+     },
+     {
+      "label": {
+       "en": "Premium lustre/matte (up to 240 pages)",
+       "de": "Premium Lustre/Matt (bis 240 Seiten)"
+      },
+      "spine": "printer",
+      "maxPages": 240
+     },
+     {
+      "label": {
+       "en": "Layflat (up to 110 pages)",
+       "de": "Layflat (bis 110 Seiten)"
+      },
+      "spine": "printer",
+      "maxPages": 110
+     }
+    ]
+   },
+   "softcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 6.35,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": 20,
+     "max": 440,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3.175,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://www.blurb.com/make/pdf_to_book/booksize_calculator"
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 171.45,
+    "h": 168.4,
+    "label": {
+     "en": "Small Square 7 × 7 in, hardcover (trimmed 6.75 × 6.63)",
+     "de": "Small Square 7 × 7 in, hardcover (trimmed 6.75 × 6.63)"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 203.2,
+    "h": 254,
+    "label": {
+     "en": "Standard Portrait 8 × 10 in, hardcover",
+     "de": "Standard Portrait 8 × 10 in, hardcover"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 241.3,
+    "h": 203.2,
+    "label": {
+     "en": "Standard Landscape 10 × 8 in, hardcover (trimmed 9.5 × 8)",
+     "de": "Standard Landscape 10 × 8 in, hardcover (trimmed 9.5 × 8)"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 317.5,
+    "h": 270,
+    "label": {
+     "en": "Large Landscape 13 × 11 in, hardcover (trimmed 12.5 × 10.63)",
+     "de": "Large Landscape 13 × 11 in, hardcover (trimmed 12.5 × 10.63)"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 298.45,
+    "h": 298.45,
+    "label": {
+     "en": "Large Square 12 × 12 in, hardcover (trimmed 11.75)",
+     "de": "Large Square 12 × 12 in, hardcover (trimmed 11.75)"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 171.45,
+    "h": 168.4,
+    "label": {
+     "en": "Small Square 7 × 7 in, softcover",
+     "de": "Small Square 7 × 7 in, softcover"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 203.2,
+    "h": 254,
+    "label": {
+     "en": "Standard Portrait 8 × 10 in, softcover",
+     "de": "Standard Portrait 8 × 10 in, softcover"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 241.3,
+    "h": 203.2,
+    "label": {
+     "en": "Standard Landscape 10 × 8 in, softcover",
+     "de": "Standard Landscape 10 × 8 in, softcover"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ingramspark",
+  "name": "IngramSpark",
+  "region": "Worldwide",
+  "url": "https://www.ingramspark.com",
+  "units": "in",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://help.ingramspark.com/hc/en-us/articles/35304333693837-Case-Laminate-and-Digital-Cloth-Hard-Cover",
+   "https://marketing.ingramcontent.com/mrkng/documents/publishers/Cover-Bleed-Dimensions.pdf"
+  ],
+  "notes": {
+   "en": "IngramSpark publishes no per-page spine figure; the spine comes with the cover template from its title setup. Case laminate: 0.625 in wrap on every edge and 0.5 in hinge on each side of the spine.",
+   "de": "IngramSpark nennt keine Rückenstärke pro Seite; der Rücken kommt mit der Umschlagvorlage aus der Titelanlage. Case Laminate: 0,625 Zoll Einschlag an jeder Kante und 0,5 Zoll Falz auf jeder Seite des Rückens."
+  },
+  "bindings": {
+   "softcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 6.35,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3.175,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://myaccount.ingramspark.com/Portal/Tools/CoverTemplateGenerator"
+    },
+    "papers": []
+   },
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 6.35,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 15.875,
+     "overW": 0,
+     "overH": 0,
+     "joint": 12.7,
+     "hinge": 12.7
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://myaccount.ingramspark.com/Portal/Tools/CoverTemplateGenerator"
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 215.9,
+    "label": {
+     "en": "Case laminate 8.5 × 8.5 in",
+     "de": "Case laminate 8.5 × 8.5 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Case laminate 8.5 × 11 in",
+     "de": "Case laminate 8.5 × 11 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Case laminate A4",
+     "de": "Case laminate A4"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Paperback 8.5 × 11 in",
+     "de": "Paperback 8.5 × 11 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Paperback A4",
+     "de": "Paperback A4"
+    }
+   }
+  ]
+ },
+ {
+  "id": "mixam",
+  "name": "Mixam",
+  "region": "UK · US · DE · AU · CA",
+  "url": "https://mixam.com",
+  "units": "mm",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://mixam.co.uk/support/hardcoversetup",
+   "https://mixam.co.uk/support/filesetup"
+  ],
+  "notes": {
+   "en": "Mixam shows the spine width in the cart and the order’s Artwork tab. Hardcover cover: 5 mm hinge on each side of the spine and 20 mm bleed on every edge.",
+   "de": "Mixam zeigt die Rückenbreite im Warenkorb und im Artwork-Tab der Bestellung. Hardcover-Umschlag: 5 mm Falz auf jeder Seite des Rückens und 20 mm Beschnitt an jeder Kante."
+  },
+  "bindings": {
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3,
+    "safety": 5,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 20,
+     "overW": 0,
+     "overH": 0,
+     "joint": 5,
+     "hinge": 5
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://mixam.com/hardcoverbooks"
+    },
+    "papers": []
+   },
+   "softcover": {
+    "status": "partial",
+    "bleed": 3,
+    "safety": 5,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "cmyk",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://mixam.com"
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Hardcover A4 portrait",
+     "de": "Hardcover A4 hoch"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 297,
+    "h": 210,
+    "label": {
+     "en": "Hardcover A4 landscape",
+     "de": "Hardcover A4 quer"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 210,
+    "h": 210,
+    "label": {
+     "en": "Hardcover 210 × 210 mm",
+     "de": "Hardcover 210 × 210 mm"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 148,
+    "h": 210,
+    "label": {
+     "en": "Hardcover A5 portrait",
+     "de": "Hardcover A5 hoch"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 203.2,
+    "h": 203.2,
+    "label": {
+     "en": "Hardcover 8 × 8 in",
+     "de": "Hardcover 8 × 8 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 215.9,
+    "h": 279.4,
+    "label": {
+     "en": "Hardcover 8.5 × 11 in",
+     "de": "Hardcover 8.5 × 11 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 297,
+    "label": {
+     "en": "Softcover A4 portrait",
+     "de": "Softcover A4 hoch"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 210,
+    "h": 210,
+    "label": {
+     "en": "Softcover 210 × 210 mm",
+     "de": "Softcover 210 × 210 mm"
+    }
+   }
+  ]
+ },
+ {
+  "id": "saal",
+  "name": "Saal Digital (Professional Line)",
+  "region": "EU · UK · US",
+  "url": "https://www.saal-digital.com",
+  "units": "mm",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://saal-digital.com/service/professional-zone/create-your-files-in-indesign"
+  ],
+  "notes": {
+   "en": "Saal wants every double page as one PDF page, sRGB, no crop marks, and the first page of the first spread and last page of the last spread left empty. Bleed, cover and spine come from the InDesign templates in Saal’s Professional Zone: import the cover template.",
+   "de": "Saal will jede Doppelseite als eine PDF-Seite, sRGB, ohne Schnittmarken, und die erste Seite der ersten sowie die letzte Seite der letzten Doppelseite leer. Beschnitt, Umschlag und Rücken stehen in den InDesign-Vorlagen der Professional Zone: Umschlagvorlage importieren."
+  },
+  "bindings": {
+   "layflat": {
+    "status": "partial",
+    "bleed": 3,
+    "safety": 10,
+    "interior": "spreads",
+    "blankEnds": true,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 15,
+     "overW": 3,
+     "overH": 3,
+     "joint": 0,
+     "hinge": 8
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://www.saal-digital.com/photo-book/professional-zone"
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "layflat",
+    "w": 210,
+    "h": 210,
+    "label": {
+     "en": "Professional Line 21 × 21 cm",
+     "de": "Professional Line 21 × 21 cm"
+    }
+   },
+   {
+    "binding": "layflat",
+    "w": 300,
+    "h": 210,
+    "label": {
+     "en": "Professional Line 30 × 21 cm landscape",
+     "de": "Professional Line 30 × 21 cm quer"
+    }
+   },
+   {
+    "binding": "layflat",
+    "w": 220,
+    "h": 300,
+    "label": {
+     "en": "Professional Line 22 × 30 cm portrait",
+     "de": "Professional Line 22 × 30 cm hoch"
+    }
+   },
+   {
+    "binding": "layflat",
+    "w": 300,
+    "h": 300,
+    "label": {
+     "en": "Professional Line 30 × 30 cm",
+     "de": "Professional Line 30 × 30 cm"
+    }
+   },
+   {
+    "binding": "layflat",
+    "w": 400,
+    "h": 300,
+    "label": {
+     "en": "Professional Line 40 × 30 cm",
+     "de": "Professional Line 40 × 30 cm"
+    }
+   }
+  ]
+ },
+ {
+  "id": "prestophoto",
+  "name": "PrestoPhoto",
+  "region": "US · Worldwide",
+  "url": "https://prestophoto.com",
+  "units": "in",
+  "checked": "2026-11-21",
+  "sources": [
+   "https://prestophoto.com/help/PDF+Specs"
+  ],
+  "notes": {
+   "en": "Pages are set up 0.25 in larger than the book (1/8 in bleed per edge), sRGB, no crop marks. Hardcovers trim up to 1/4 in, so keep content 3/4 in from the edge. The spine width comes from PrestoPhoto’s cover calculator.",
+   "de": "Seiten 0,25 Zoll größer als das Buch anlegen (1/8 Zoll Beschnitt je Kante), sRGB, ohne Schnittmarken. Hardcover werden bis zu 1/4 Zoll beschnitten, wichtige Inhalte also 3/4 Zoll vom Rand. Die Rückenbreite nennt PrestoPhotos Umschlagrechner."
+  },
+  "bindings": {
+   "hardcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 19,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 15,
+     "overW": 3,
+     "overH": 3,
+     "joint": 0,
+     "hinge": 10
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://prestophoto.com/help/Book+Cover+Specifications"
+    },
+    "papers": []
+   },
+   "softcover": {
+    "status": "partial",
+    "bleed": 3.175,
+    "safety": 19,
+    "interior": "single",
+    "blankEnds": false,
+    "pages": {
+     "min": null,
+     "max": null,
+     "step": 2
+    },
+    "colour": "srgb",
+    "cover": {
+     "mode": "spread",
+     "wrap": 3.175,
+     "overW": 0,
+     "overH": 0,
+     "joint": 0,
+     "hinge": 0
+    },
+    "spine": {
+     "type": "printer",
+     "url": "https://prestophoto.com/help/Book+Cover+Specifications"
+    },
+    "papers": []
+   }
+  },
+  "formats": [
+   {
+    "binding": "hardcover",
+    "w": 203.2,
+    "h": 203.2,
+    "label": {
+     "en": "Hardcover 8 × 8 in",
+     "de": "Hardcover 8 × 8 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 279.4,
+    "h": 215.9,
+    "label": {
+     "en": "Hardcover 11 × 8.5 in",
+     "de": "Hardcover 11 × 8.5 in"
+    }
+   },
+   {
+    "binding": "hardcover",
+    "w": 304.8,
+    "h": 304.8,
+    "label": {
+     "en": "Hardcover 12 × 12 in",
+     "de": "Hardcover 12 × 12 in"
+    }
+   },
+   {
+    "binding": "softcover",
+    "w": 203.2,
+    "h": 203.2,
+    "label": {
+     "en": "Softcover 8 × 8 in",
+     "de": "Softcover 8 × 8 in"
+    }
+   }
+  ]
+ }
+]

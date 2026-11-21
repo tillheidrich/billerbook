@@ -12,7 +12,7 @@ Open source · macOS app · works with Lightroom Classic or any folder · print-
   <a href="#deutsch">Deutsch</a>
 </p>
 
-![Billerbook editor with a panorama across a spread](docs/images/spread.jpg)
+![Billerbook editor: photo pool, spread, layouts and preflight](docs/images/editor-010.jpg)
 
 *Billerbook* is Low German for picture book. It is the tool I wanted after years of the same routine: pick photos in Lightroom, lay them out in Lightroom's Book module, export a PDF that never quite matched the printer, fix it in InDesign, and fight every crop by hand. Billerbook does the whole thing in one place and writes the PDF the print shop asks for.
 
@@ -40,8 +40,8 @@ Open source · macOS app · works with Lightroom Classic or any folder · print-
 
 | | |
 |---|---|
-| ![Overview of all spreads](docs/images/overview.jpg) | ![Cover with spine and turn-in](docs/images/cover.jpg) |
-| ![Portrait softcover edition from the same photos](docs/images/softcover.jpg) | ![Export dialog](docs/images/export.jpg) |
+| ![Print settings: print shop, paper, spine from the printer's rules, cover template import](docs/images/printsettings-010.jpg) | ![Page tools: duplicate, copy layout, own layouts, background photo](docs/images/pagetools-010.jpg) |
+| ![Overview of all spreads with preflight](docs/images/overview-010.jpg) | ![Cover with spine and turn-in](docs/images/cover-010.jpg) |
 
 ## Print shops
 

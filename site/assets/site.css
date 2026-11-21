@@ -32,7 +32,7 @@ a{color:inherit}
 
 /* type */
 .display,h1,h2{font-family:var(--sans);font-weight:800;font-stretch:68%;letter-spacing:-.01em;text-transform:none;margin:0}
-h1{font-size:clamp(3.4rem,8.6vw,8.25rem);line-height:.98}
+h1{font-size:clamp(3.4rem,9.5vw,9rem);line-height:.92}
 h2{font-size:clamp(2.6rem,5.6vw,5.2rem);line-height:.95}
 h3{font:700 1.35rem/1.2 var(--sans);font-stretch:85%;margin:0 0 .5rem}
 h1 .hl,h2 .hl{color:var(--red)}
@@ -189,3 +189,13 @@ footer nav{display:flex;gap:1.5rem;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}}
 @media (scripting:none){.rv{opacity:1;transform:none}}
 .h1{margin-top:1.25rem}.kb{display:block}.prh{margin:1.25rem 0 1.5rem}
+.shops td{vertical-align:top}
+.shops td:last-child{text-align:left;font-weight:400}
+.shops .muted{font-size:.85rem}
+.shops-page{max-width:56rem}
+.shops-page .shop{padding:2.5rem 0 1rem;border-top:1px solid var(--rule)}
+.shops-page h2{font-size:clamp(2rem,4vw,3rem)}
+.shops-page h3{font:700 1.1rem var(--sans);font-stretch:90%;margin:1.5rem 0 .5rem;display:flex;gap:.6rem;align-items:center}
+.shops-page .tag{font:600 .7rem var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:.25rem .55rem;border-radius:99px;background:var(--paper-2);color:var(--ink-2)}
+.shops-page .spec td:last-child{text-align:left;font-weight:500}
+.shops-page .spec td:first-child{width:12rem}

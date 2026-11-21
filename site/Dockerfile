@@ -4,6 +4,7 @@ ARG CONTACT_EMAIL
 WORKDIR /src
 COPY build.py ./
 COPY assets ./assets
+COPY data ./data
 
 RUN CONTACT_EMAIL="$CONTACT_EMAIL" python3 build.py
 
