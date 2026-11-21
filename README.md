@@ -54,7 +54,7 @@ Want your print shop in the list? See [docs/print-profiles.md](docs/print-profil
 
 ## Install
 
-**Mac:** download the DMG for Apple silicon or Intel from [Releases](https://github.com/tillheidrich/billerbook/releases/latest). The app is signed and notarized and updates itself.
+**Mac:** download the DMG for Apple silicon or Intel from [Releases](https://github.com/tillheidrich/billerbook/releases/latest). The app is signed and updates itself. Version 0.9.0 is not yet notarized by Apple: on first launch, right-click Billerbook in Applications and choose *Open* (or allow it under System Settings → Privacy & Security).
 
 **From source (macOS, Linux, Windows):** Node.js 22.13 or newer.
 
