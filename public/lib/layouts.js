@@ -224,7 +224,8 @@ export function layoutCtx(ed, ownerIndex, aspects, spread) {
   const p = ed.pages[ownerIndex] || {};
   return {
     W: spread ? 2 * ed.w : ed.w, H: ed.h,
-    m: num(ed.margin, 12), mi: num(ed.margin, 12) + num(ed.gutter, 6), g: num(ed.gap, 4),
+    // Page overrides (Lightroom "cell padding" / page margins): p.margin, p.gap
+    m: num(p.margin ?? ed.margin, 12), mi: num(p.margin ?? ed.margin, 12) + num(ed.gutter, 6), g: num(p.gap ?? ed.gap, 4),
     side: ownerIndex % 2 === 1 ? 'L' : 'R',
     aspects, custom: p.frames, variant: p.variant || 0,
   };
@@ -308,7 +309,7 @@ export function pageNumberFor(ed, i) {
   const p = ed.pages[i];
   const own = pageOwner(ed, i);
   if (own.spread) return null;
-  if (p && ['voll', 'zwei-randlos', 'halb-text', 'leer'].includes(p.layout)) return null;
+  if (p && (p.hideNumber || ['voll', 'zwei-randlos', 'halb-text', 'leer'].includes(p.layout))) return null;
   const side = i % 2 === 1 ? 'L' : 'R';
   const y = ed.h - Math.max(6, (ed.safety || 5) + 1);
   const m = Math.max(ed.margin ?? 12, (ed.safety || 5) + 2);

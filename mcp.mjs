@@ -116,9 +116,110 @@ server.tool('import_lightroom_book', 'Import a book made in the Lightroom Classi
 server.tool('get_project', 'Summary: editions, formats, page counts, how many pool images are placed per edition.', { project: P },
   async (a) => text(await call(`/api/project/${await projectId(a.project)}/summary`)));
 
-server.tool('list_formats', 'Print shop profiles and their book formats (for add_edition / update_edition).', {}, async () => {
-  const s = await call('/api/system');
-  return text(s.providers.map((p) => ({ provider: p.id, name: p.name, verified: p.verified, formats: p.formats.map((f) => ({ id: f.id, binding: f.binding, size: `${f.w}×${f.h}`, label: f.label.en })) })));
+server.tool('list_formats', 'Print shops (built-in and the user’s own profiles), their formats, papers and how reliable each profile is. Use the ids with add_edition / set_print_setup.', {
+  provider: z.string().optional().describe('Only this print shop'),
+}, async (a) => {
+  const list = await call('/api/profiles');
+  return text(list.filter((p) => !a.provider || p.id === a.provider).map((p) => ({
+    provider: p.id, name: p.name, region: p.region, userProfile: !!p.user, notes: p.notes?.en, sources: p.sources,
+    bindings: Object.fromEntries(Object.entries(p.bindings).map(([k, b]) => [k, {
+      status: b.status, interior: b.interior, blankEnds: b.blankEnds, bleed: b.bleed, safety: b.safety, glue: b.glue, pages: b.pages, colour: b.colour,
+      cover: b.cover, spine: b.spine?.type, papers: b.papers?.map((x) => ({ id: x.id, label: x.label.en, spine: x.spine.type, maxPages: x.maxPages })),
+    }])),
+    formats: p.formats.map((f) => ({ id: f.id, binding: f.binding, size_mm: `${f.w}×${f.h}`, label: f.label.en, custom: !!f.custom })),
+  })));
+});
+
+server.tool('get_print_specs', 'Everything the print shop will receive for an edition: trim size, bleed, interior PDF layout (single pages or spreads), page count rules, spine width with its source (formula, table, template, manual or estimate), cover PDF size and panel positions.', {
+  project: P, edition: E,
+}, async (a) => {
+  const pid = await projectId(a.project);
+  return text(await call(`/api/project/${pid}/print-specs?edition=${await editionId(pid, a.edition)}`));
+});
+
+server.tool('set_print_setup', 'Choose print shop, format and paper for an edition, and set print details: interior ("single"|"spreads"), blank_ends, spine_mm (value from the printer; null clears it), cover measurements (wrap, overW, overH, joint, hinge, mode "spread"|"none"), colorMode.', {
+  project: P, edition: E, provider: z.string().optional(), format: z.string().optional(), paper: z.string().optional(),
+  interior: z.enum(['single', 'spreads']).optional(), blank_ends: z.boolean().optional(), spine_mm: z.number().nullable().optional(),
+  cover: z.object({ wrap: z.number(), overW: z.number(), overH: z.number(), joint: z.number(), hinge: z.number(), mode: z.enum(['spread', 'none']) }).partial().optional(),
+  width_mm: z.number().optional(), height_mm: z.number().optional(), colorMode: z.enum(['cmyk', 'rgb']).optional(),
+}, async (a) => {
+  const pid = await projectId(a.project);
+  const eid = await editionId(pid, a.edition);
+  const patch = {};
+  if (a.provider) patch.provider = a.provider;
+  if (a.format) patch.format = a.format;
+  if (a.paper) patch.paper = a.paper;
+  await op(pid, 'updateEdition', { edition: eid, patch });
+  const p2 = {};
+  if (a.interior) p2.interior = a.interior;
+  if (a.blank_ends != null) p2.blankEnds = a.blank_ends;
+  if (a.spine_mm !== undefined) p2.spine = a.spine_mm;
+  if (a.width_mm) p2.w = a.width_mm;
+  if (a.height_mm) p2.h = a.height_mm;
+  if (a.colorMode) p2.colorMode = a.colorMode;
+  if (a.cover) { const pr = await call(`/api/project/${pid}`); const ed = pr.editions.find((x) => x.id === eid); p2.cover = { ...ed.cover, ...a.cover }; }
+  if (Object.keys(p2).length) await op(pid, 'updateEdition', { edition: eid, patch: p2 });
+  return text(await call(`/api/project/${pid}/print-specs?edition=${eid}`));
+});
+
+server.tool('import_cover_template', 'Read the print shop’s cover template (PDF from their calculator, e.g. KDP, Blurb, Lulu, IngramSpark, Saal) and use its exact size. The spine width follows from it. Or pass width_mm/height_mm read from the template.', {
+  project: P, edition: E, path: z.string().optional(), width_mm: z.number().optional(), height_mm: z.number().optional(), clear: z.boolean().default(false),
+}, async (a) => {
+  const pid = await projectId(a.project);
+  const eid = await editionId(pid, a.edition);
+  if (a.clear) return text(await op(pid, 'setCoverTemplate', { edition: eid }));
+  if (a.path) return text(await call(`/api/project/${pid}/cover-template?edition=${eid}`, { body: { path: a.path } }));
+  if (a.width_mm && a.height_mm) return text(await op(pid, 'setCoverTemplate', { edition: eid, W: a.width_mm, H: a.height_mm, source: 'manual' }));
+  throw new Error('path or width_mm + height_mm required');
+});
+
+server.tool('save_print_profile', 'Create or replace a user print profile (JSON in the same shape list_formats returns, with bindings and formats), e.g. for a print shop that is not built in. Or derive one from an edition’s current settings with from_edition.', {
+  profile: z.record(z.any()).optional(), project: z.string().optional(), from_edition: z.string().optional(), name: z.string().optional(),
+}, async (a) => {
+  let prof = a.profile;
+  if (!prof && a.project) {
+    const pid = await projectId(a.project);
+    prof = await call(`/api/project/${pid}/profile-from-edition?edition=${await editionId(pid, a.from_edition)}&name=${encodeURIComponent(a.name || '')}`);
+  }
+  if (!prof) throw new Error('profile or project + from_edition required');
+  prof.user = true;
+  return text(await call('/api/profiles', { body: prof }));
+});
+
+server.tool('page_tools', 'Book-module page tools: duplicate pages, copy the layout of one page to others, save a page layout as a reusable custom layout, apply or delete a custom layout, list custom layouts.', {
+  project: P, edition: E, action: z.enum(['duplicate', 'copy_layout', 'save_layout', 'apply_layout', 'delete_layout', 'list_layouts']),
+  page: z.number().optional().describe('0-based page index'), count: z.number().default(1), to: z.array(z.number()).optional().describe('target pages for copy_layout'),
+  name: z.string().optional(), layout_id: z.string().optional(),
+}, async (a) => {
+  const pid = await projectId(a.project);
+  const eid = await editionId(pid, a.edition);
+  if (a.action === 'duplicate') return text(await op(pid, 'duplicatePages', { edition: eid, from: a.page, count: a.count }));
+  if (a.action === 'copy_layout') return text(await op(pid, 'copyLayout', { edition: eid, from: a.page, to: a.to || [] }));
+  if (a.action === 'save_layout') return text(await op(pid, 'saveCustomLayout', { edition: eid, page: a.page, name: a.name }));
+  if (a.action === 'apply_layout') return text(await op(pid, 'applyCustomLayout', { edition: eid, page: a.page, id: a.layout_id || a.name }));
+  if (a.action === 'delete_layout') return text(await op(pid, 'deleteCustomLayout', { id: a.layout_id }));
+  const pr = await call(`/api/project/${pid}`);
+  return text((pr.customLayouts || []).map((l) => ({ id: l.id, name: l.name, photos: l.photos, spread: l.spread })));
+});
+
+server.tool('set_page_style', 'Per-page settings: background colour, background photo with opacity (key from list_images, null removes), page margin and gap between photos in mm (null = edition default), hide the page number.', {
+  project: P, edition: E, page: z.number(), bg: z.string().optional(), bg_photo: z.string().nullable().optional(), opacity: z.number().min(0).max(1).optional(),
+  margin: z.number().nullable().optional(), gap: z.number().nullable().optional(), hide_number: z.boolean().optional(),
+}, async (a) => {
+  const pid = await projectId(a.project);
+  const patch = {};
+  if (a.bg) patch.bg = a.bg;
+  if (a.bg_photo !== undefined) patch.bgPhoto = a.bg_photo ? { key: a.bg_photo, opacity: a.opacity ?? 0.35 } : null;
+  if (a.margin !== undefined) patch.margin = a.margin;
+  if (a.gap !== undefined) patch.gap = a.gap;
+  if (a.hide_number != null) patch.hideNumber = a.hide_number || null;
+  await op(pid, 'setPageProps', { edition: await editionId(pid, a.edition), page: a.page, patch });
+  return text('ok');
+});
+
+server.tool('lightroom_usage', 'Which photos are in which edition, as Lightroom photo ids and file paths. The Billerbook Lightroom plug-in uses the same data to keep a collection per edition in Lightroom Classic.', {}, async () => {
+  const u = await call('/api/lightroom/usage');
+  return text(u.map((x) => ({ project: x.project, edition: x.edition, lightroomPhotos: x.ids.length, files: x.files.length, pages: x.pages })));
 });
 
 server.tool('list_layouts', 'Available page and cover layouts.', {}, async () => {
@@ -153,12 +254,12 @@ server.tool('list_images', 'List images in the pool with usage. Use filter "unpl
   });
 });
 
-server.tool('add_edition', 'Add an edition (another version of the same book, e.g. a shorter softcover). Optionally copy pages from an existing edition; layouts re-flow to the new format.', {
-  project: P, name: z.string(), provider: z.string().default('wmd'), format: z.string(), copy_from: z.string().optional(),
+server.tool('add_edition', 'Add an edition (another version of the same book, e.g. a shorter softcover). Optionally copy pages from an existing edition; layouts re-flow to the new format. Provider/format/paper ids come from list_formats.', {
+  project: P, name: z.string(), provider: z.string().default('wmd'), format: z.string(), paper: z.string().optional(), copy_from: z.string().optional(),
 }, async (a) => {
   const pid = await projectId(a.project);
   const copyFrom = a.copy_from ? await editionId(pid, a.copy_from) : undefined;
-  const ed = await op(pid, 'addEdition', { name: a.name, provider: a.provider, format: a.format, copyFrom });
+  const ed = await op(pid, 'addEdition', { name: a.name, provider: a.provider, format: a.format, paper: a.paper, copyFrom });
   return text({ id: ed.id, name: ed.name, pages: ed.pages.length });
 });
 

@@ -11,6 +11,15 @@ process.env.BILLERBOOK_DATA ||= app.getPath('userData');
 let win = null;
 let base = null;
 
+async function installLrPlugin() {
+  try {
+    const r = await fetch(`${base}/api/lightroom/install-plugin`, { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    dialog.showMessageBox({ type: 'info', message: 'Lightroom plug-in installed', detail: `${j.installed}\n\nRestart Lightroom Classic. Billerbook then keeps a collection per edition under “Billerbook” in the Collections panel.` });
+  } catch (e) { dialog.showErrorBox('Billerbook', e.message); }
+}
+
 async function startServer() {
   // Reuse a Billerbook server that is already running (e.g. started by an MCP client).
   try {
@@ -77,6 +86,8 @@ function buildMenu() {
     { label: 'File', submenu: [
       { label: 'Show Data Folder', click: () => shell.openPath(process.env.BILLERBOOK_DATA) },
       { label: 'Show Exports', click: () => shell.openPath(path.join(app.getPath('desktop'), 'Billerbook-Export')) },
+      { type: 'separator' },
+      { label: 'Install Lightroom Classic Plug-in…', click: installLrPlugin },
       { type: 'separator' }, isMac ? { role: 'close' } : { role: 'quit' },
     ] },
     { role: 'editMenu' },

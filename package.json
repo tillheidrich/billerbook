@@ -1,6 +1,6 @@
 {
   "name": "billerbook",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Open-source photo book layout for print: one photo pool, several editions of the same book, Lightroom Classic integration, print-ready PDFs for any print shop, an MCP server for AI assistants.",
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -13,7 +13,7 @@
     "dev": "node --watch server.mjs",
     "mcp": "node --disable-warning=ExperimentalWarning mcp.mjs",
     "app": "electron .",
-    "test": "node test/features.mjs && node --disable-warning=ExperimentalWarning test/run.mjs && node --disable-warning=ExperimentalWarning test/focal.mjs",
+    "test": "node test/features.mjs && node --disable-warning=ExperimentalWarning test/run.mjs && node --disable-warning=ExperimentalWarning test/focal.mjs && node --disable-warning=ExperimentalWarning test/print.mjs",
     "dist:mac": "bash scripts/build-mac.sh",
     "release:mac": "bash scripts/build-mac.sh --publish"
   },
@@ -23,10 +23,11 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
     "@pdf-lib/standard-fonts": "^1.0.0",
+    "electron-updater": "^6.8.0",
     "exifr": "^7.1.3",
+    "pdf-lib": "^1.17.1",
     "sharp": "^0.34.0",
-    "zod": "^3.25.0",
-    "electron-updater": "^6.8.0"
+    "zod": "^3.25.0"
   },
   "productName": "Billerbook",
   "author": {
@@ -70,6 +71,7 @@
       "lib/**",
       "public/**",
       "desktop/**",
+      "lightroom/**",
       "package.json",
       "LICENSE",
       "!test/**",

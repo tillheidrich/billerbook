@@ -1,6 +1,6 @@
-import { placement, spreadsOf, coverSpec, clamp, luminance, estimateSpine } from './lib/geometry.js';
+import { placement, spreadsOf, coverSpec, clamp, luminance, estimateSpine, spineOf } from './lib/geometry.js';
 import { LAYOUTS, LAYOUT_ORDER, COVER_ORDER, COVER_LAYOUTS, buildFrames, pageOwner, isSpreadPage, layoutCtx, coverFrames, pageNumberFor } from './lib/layouts.js';
-import { PROVIDERS, findProvider } from './lib/providers.js';
+import { findProvider, allProviders, registerProfiles, papersOf, editionSpecFrom, profileFromEdition, validateProfile } from './lib/providers.js';
 import * as ops from './lib/ops.js';
 import { t, tl, getLang, setLang, STRINGS } from './lib/i18n.js';
 
@@ -126,6 +126,7 @@ function connectEvents() {
 async function boot() {
   document.documentElement.lang = getLang();
   S.sys = await api('/api/system');
+  registerProfiles((S.sys.providers || []).filter((p) => p.user));
   const list = await api('/api/projects');
   let id = location.hash.slice(1);
   try { id ||= localStorage.getItem('billerbook-last'); } catch {}
@@ -338,6 +339,7 @@ function pageEl(i, left, k, spread = false) {
   el.addEventListener('mousedown', (ev) => { if (ev.target === el) { S.page = i; S.sel = null; renderInspector(); el.closest('.spread')?.querySelectorAll('.frame.sel').forEach((f) => f.classList.remove('sel')); } });
   const frames = buildFrames(e, i, aspectOf);
   const target = { kind: 'page', page: i };
+  if (p.bgPhoto?.key) el.append(h('img', { class: 'bgphoto', src: thumb(p.bgPhoto.key, 1200), alt: '', draggable: 'false', style: { opacity: p.bgPhoto.opacity ?? 0.35 } }));
   frames.forEach((f, idx) => {
     const fe = frameEl({ ...f, idx }, target, k, p, { textColor: luminance(bg) < 0.45 ? '#fff' : '#1a1a1a' });
     if (p.layout === 'frei') addResize(fe, target, { ...f, idx }, k, W, e.h);
@@ -683,6 +685,36 @@ function renderInspector() {
       b.addEventListener('click', () => { if (id !== 'frei') mutate((pr) => ops.setLayout(pr, e.id, own.owner, id)); });
       lays.append(b);
     }
+    const mine = (S.project.customLayouts || []).filter((L) => !L.spread || spreadsOk);
+    if (mine.length) {
+      lays.append(h('div', { class: 'lay-group', style: { gridColumn: '1 / -1' } }, t('myLayouts')));
+      for (const L of mine) {
+        const W = L.spread ? 2 * e.w : e.w, H = e.h;
+        const svg = `<svg viewBox="0 0 ${W} ${H}"><rect class="pg" width="${W}" height="${H}"/>${L.frames.map((f) => `<rect class="${f.kind === 'text' ? 'tx' : 'im'}" x="${f.x * W}" y="${f.y * H}" width="${f.w * W}" height="${f.h * H}"/>`).join('')}</svg>`;
+        const b = h('button', { class: 'lay mine', title: L.name, html: svg, style: L.spread ? { gridColumn: 'span 2' } : null });
+        b.addEventListener('click', () => mutate((pr) => ops.applyCustomLayout(pr, e.id, own.owner, L.id)));
+        b.addEventListener('contextmenu', (ev) => { ev.preventDefault(); if (confirm(`${t('delete')}: ${L.name}?`)) mutate((pr) => ops.deleteCustomLayout(pr, L.id)); });
+        lays.append(b);
+      }
+    }
+    const copyTo = (mode) => {
+      let targets = [];
+      const n = (p.slots || []).filter(Boolean).length;
+      if (mode === 'next') targets = [own.owner + (own.spread ? 2 : 1)];
+      else if (mode === 'all') targets = e.pages.map((x, i) => i).filter((i) => pageOwner(e, i).owner === i && i !== own.owner && (e.pages[i].slots || []).filter(Boolean).length === n);
+      else if (mode === 'range') {
+        const r = prompt(t('clRangePrompt'));
+        if (!r) return;
+        for (const part of r.split(',')) {
+          const [a, b] = part.split('-').map((x) => parseInt(x, 10));
+          if (Number.isFinite(a)) for (let i = a; i <= (Number.isFinite(b) ? b : a); i++) targets.push(i - 1);
+        }
+      }
+      let res;
+      mutate((pr) => { res = ops.copyLayout(pr, e.id, own.owner, targets); });
+      toast(t('layoutCopied', { n: res?.changed ?? 0 }));
+    };
+    const selKey = [...S.poolSel][0] || (S.sel?.kind === 'page' ? e.pages[pageOwner(e, S.sel.page).owner]?.slots?.[S.sel.slot]?.key : null);
     el.append(h('div', { class: 'sec' },
       h('h3', {}, t('layout'), h('span', {}, `${title} · ${tl(p.layout)}`)), lays,
       h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('background')),
@@ -698,7 +730,24 @@ function renderInspector() {
       h('div', { class: 'row' },
         h('button', { class: 'btn small', onclick: () => mutate((pr) => ops.insertPages(pr, e.id, own.owner, 1)) }, `+ ${t('insertBefore')}`),
         h('button', { class: 'btn small', onclick: () => { mutate((pr) => ops.insertPages(pr, e.id, own.owner + (own.spread ? 2 : 1), 1)); } }, `+ ${t('insertAfter')}`),
-        h('button', { class: 'btn small danger', onclick: () => { mutate((pr) => ops.deletePages(pr, e.id, own.owner, own.spread ? 2 : 1)); S.page = null; S.sel = null; fixIndexes(); renderAll(); } }, own.spread ? t('deleteSpread') : t('deletePage')))));
+        h('button', { class: 'btn small danger', onclick: () => { mutate((pr) => ops.deletePages(pr, e.id, own.owner, own.spread ? 2 : 1)); S.page = null; S.sel = null; fixIndexes(); renderAll(); } }, own.spread ? t('deleteSpread') : t('deletePage'))),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', title: '⌘D', onclick: () => mutate((pr) => ops.duplicatePages(pr, e.id, own.owner, own.spread ? 2 : 1)) }, t('duplicatePage')),
+        h('button', { class: 'btn small', onclick: () => { const name = prompt(t('layoutName'), tl(p.layout)); if (name != null) mutate((pr) => ops.saveCustomLayout(pr, e.id, own.owner, name)); } }, t('saveLayout'))),
+      h('label', { class: 'field' }, h('span', {}, t('copyLayoutTo')),
+        sel([['', '…'], ['next', t('clNext')], ['all', t('clAll')], ['range', t('clRange')]], '', (v) => { if (v) copyTo(v); }))),
+    h('details', { class: 'sec page-more' }, h('summary', {}, t('bgPhoto'), ' · ', t('pageMargin')),
+      h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('bgPhoto')),
+        p.bgPhoto ? h('img', { class: 'bgthumb', src: thumb(p.bgPhoto.key, 120), alt: '' }) : h('span', { class: 'muted' }, t('bgPhotoNone'))),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', disabled: selKey ? null : true, onclick: () => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { bgPhoto: { key: selKey, opacity: p.bgPhoto?.opacity ?? 0.35 } })) }, t('bgPhotoSet')),
+        p.bgPhoto ? h('button', { class: 'btn small danger', onclick: () => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { bgPhoto: null })) }, t('remove')) : null),
+      p.bgPhoto ? h('label', { class: 'field' }, h('span', {}, `${t('opacity')} ${Math.round((p.bgPhoto.opacity ?? 0.35) * 100)} %`),
+        h('input', { type: 'range', min: 0.05, max: 1, step: 0.05, value: p.bgPhoto.opacity ?? 0.35, onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { bgPhoto: { ...p.bgPhoto, opacity: Number(ev.target.value) } })) })) : null,
+      h('div', { class: 'grid2' },
+        h('label', { class: 'field' }, h('span', {}, `${t('pageMargin')} (mm)`), h('input', { class: 'input num', type: 'number', step: 1, min: 0, value: p.margin ?? '', placeholder: String(e.margin ?? 12), onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { margin: ev.target.value === '' ? null : Number(ev.target.value) })) })),
+        h('label', { class: 'field' }, h('span', {}, `${t('pageGap')} (mm)`), h('input', { class: 'input num', type: 'number', step: 0.5, min: 0, value: p.gap ?? '', placeholder: String(e.gap ?? 4), onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { gap: ev.target.value === '' ? null : Number(ev.target.value) })) }))),
+      e.pageNumbers && e.pageNumbers !== 'none' ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!p.hideNumber, onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { hideNumber: ev.target.checked || null })) }), ' ', t('hideNumber')) : null));
   }
   if (S.sel && S.sel.kind === 'page') renderFrameSection(el);
   // edition + preflight
@@ -759,9 +808,9 @@ function renderCoverInspector(el) {
     b.addEventListener('click', () => mutate(() => { cd.layout = id; }));
     lays.append(b);
   }
-  const spineIn = h('input', { class: 'input num', type: 'number', step: '0.1', min: 0, value: e.spine ?? '', placeholder: String(e.spineEstimate ?? estimateSpine(e.pages.length, e.spinePerPage)), onchange: (ev) => mutate((p) => ops.updateEdition(p, e.id, { spine: ev.target.value === '' ? null : Number(ev.target.value) })) });
+  const spineIn = h('input', { class: 'input num', type: 'number', step: '0.1', min: 0, value: e.spine ?? '', placeholder: spineOf({ ...e, spine: null }).mm.toFixed(1), onchange: (ev) => mutate((p) => ops.updateEdition(p, e.id, { spine: ev.target.value === '' ? null : Number(ev.target.value) })) });
   el.append(h('div', { class: 'sec' }, h('h3', {}, t('layout')), lays,
-    h('label', { class: 'field' }, h('span', {}, t('spine')), spineIn, h('small', {}, t('spineHint', { n: e.pages.length, e: estimateSpine(e.pages.length, e.spinePerPage) }))),
+    h('label', { class: 'field' }, h('span', {}, t('spine')), spineIn, h('small', {}, t('spineHint', { n: e.pages.length, e: spineOf({ ...e, spine: null }).mm.toFixed(1) }))),
     h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('background')), h('input', { class: 'input', type: 'color', value: cd.bg || '#ffffff', style: { width: '60px' }, onchange: (ev) => mutate(() => { cd.bg = ev.target.value; }) }))));
   if (S.sel?.kind === 'cover') {
     const s = cd.slots[S.sel.slot];
@@ -884,6 +933,8 @@ function sourcesModal() {
       h('h2', { style: { fontSize: '14px' } }, t('lightroom')),
       pathField(t('catalog'), lr.catalog, { kind: 'file', onChange: (v) => { lr.catalog = v; loadCols(); } }),
       h('div', { class: 'field' }, h('span', {}, t('collections')), colList),
+      h('div', { class: 'row muted small' }, t('lrPluginHint'), ' ',
+        h('button', { class: 'btn small', onclick: async () => { try { const r = await api('/api/lightroom/install-plugin', { method: 'POST', body: {} }); toast(t('lrPluginInstalled')); console.log(r); } catch (err) { alert(err.message); } } }, t('lrPlugin'))),
       h('div', { class: 'row muted' }, `${t('importBook')} → `, sel(prov.formats.map((f) => [f.id, f.label[getLang()] || f.label.en]), fmt.format, (v) => { fmt.format = v; })),
       pathField(t('exportFolder'), lr.exportFolder, { hint: t('exportFolderHint'), onChange: (v) => { lr.exportFolder = v; } }),
       h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('cancel')),
@@ -892,38 +943,105 @@ function sourcesModal() {
   }, { wide: true });
 }
 
+const lab = (o) => (o && typeof o === 'object' ? o[getLang()] || o.en : o || '');
+const SPEC_KEYS = ['provider', 'format', 'binding', 'w', 'h', 'paper', 'bleed', 'safety', 'glue', 'interior', 'blankEnds', 'pageMin', 'pageMax', 'pageStep',
+  'colourWanted', 'spineTextMin', 'cover', 'spineRule', 'profileStatus'];
+const EDIT_KEYS = ['name', ...SPEC_KEYS.filter((k) => !['provider', 'format'].includes(k)), 'spine', 'margin', 'gutter', 'gap', 'ppi', 'colorMode', 'icc', 'font', 'bg', 'pageNumbers', 'sharpen'];
+
+async function refreshProviders() {
+  const list = await api('/api/profiles');
+  registerProfiles(list.filter((p) => p.user));
+  S.sys.providers = list;
+}
+
+function downloadJson(name, data) {
+  const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })), download: name });
+  document.body.append(a); a.click(); a.remove();
+}
+
+function pickFile(accept) {
+  return new Promise((resolve) => {
+    const inp = h('input', { type: 'file', accept, style: { display: 'none' }, onchange: () => { resolve(inp.files[0] || null); inp.remove(); } });
+    document.body.append(inp); inp.click();
+  });
+}
+
 function editionModal(existing) {
   const isNew = !existing;
   const e = existing ? structuredClone(existing) : { name: '', provider: 'wmd', format: 'sc-a4-hoch', copyFrom: '' };
   if (isNew) Object.assign(e, ops.addEdition({ editions: [] }, { provider: 'wmd', format: 'sc-a4-hoch' }), { name: '' });
+  const L = getLang();
   modal((close) => {
     const body = h('div', { style: { display: 'grid', gap: '14px' } });
     const draw = () => {
       body.innerHTML = '';
       const prov = findProvider(e.provider);
       const f = prov.formats.find((x) => x.id === e.format) || prov.formats[0];
-      const applyFormat = (provider, format) => {
-        const tmp = ops.addEdition({ editions: [] }, { provider, format });
-        for (const k of ['provider', 'format', 'binding', 'w', 'h', 'bleed', 'safety', 'glue', 'cover', 'spinePerPage', 'pageStep']) e[k] = tmp[k];
+      const papers = papersOf(prov, e.binding);
+      const applyFormat = (provider, format, paper) => {
+        const spec = editionSpecFrom(provider, format, paper);
+        for (const k of SPEC_KEYS) e[k] = structuredClone(spec[k]);
+        e.colorMode = spec.colourWanted === 'srgb' ? 'rgb' : 'cmyk';
+        delete e.coverTemplate; e.spine = null;
         draw();
       };
-      const num = (key, label, step = 0.5) => h('label', { class: 'field' }, h('span', {}, label), h('input', { class: 'input num', type: 'number', step, value: e[key] ?? '', onchange: (ev) => { e[key] = ev.target.value === '' ? null : Number(ev.target.value); } }));
+      const num = (key, label, step = 0.5) => h('label', { class: 'field' }, h('span', {}, label), h('input', { class: 'input num', type: 'number', step, value: e[key] ?? '', onchange: (ev) => { e[key] = ev.target.value === '' ? null : Number(ev.target.value); draw(); } }));
+      const cnum = (key, label) => h('label', { class: 'field' }, h('span', {}, label), h('input', { class: 'input num', type: 'number', step: 0.1, value: e.cover?.[key] ?? 0, onchange: (ev) => { e.cover = { ...e.cover, [key]: Number(ev.target.value) || 0 }; draw(); } }));
       const iccOpts = [['', t('noIcc')], ...S.sys.icc.map((p) => [p, p.split('/').pop()])];
       if (e.icc && !S.sys.icc.includes(e.icc)) iccOpts.push([e.icc, e.icc.split('/').pop()]);
-      body.append(
-        h('label', { class: 'field' }, h('span', {}, 'Name'), h('input', { class: 'input', value: e.name, placeholder: isNew ? 'Softcover Familie' : '', oninput: (ev) => { e.name = ev.target.value; } })),
+      const preview = { ...e, pages: existing?.pages || [] };
+      const sp = spineOf(preview), cs = coverSpec(preview);
+      const status = e.profileStatus || 'manual';
+      const srcLabel = { formula: t('spFormula'), table: t('spTable'), estimate: t('spEstimate'), template: t('spTemplate'), manual: t('spManual') }[sp.source] || sp.source;
+      const ruleUrl = e.spineRule?.url;
+      const pagesRule = [e.pageMin ? `${t('min')} ${e.pageMin}` : null, e.pageMax ? `${t('max')} ${e.pageMax}` : null, e.pageStep ? `${t('step')} ${e.pageStep}` : null].filter(Boolean).join(' · ');
+      body.append(...[
+        h('label', { class: 'field' }, h('span', {}, 'Name'), h('input', { class: 'input', value: e.name, placeholder: isNew ? t('editionPlaceholder') : '', oninput: (ev) => { e.name = ev.target.value; } })),
         h('div', { class: 'grid2' },
-          h('label', { class: 'field' }, h('span', {}, t('provider')), sel(PROVIDERS.map((p) => [p.id, `${p.name}${p.verified ? ' ✓' : ''}`]), e.provider, (v) => applyFormat(v, findProvider(v).formats[0].id))),
-          h('label', { class: 'field' }, h('span', {}, t('format')), sel(prov.formats.map((x) => [x.id, `${x.label[getLang()] || x.label.en} · ${x.w} × ${x.h}`]), e.format, (v) => applyFormat(e.provider, v)))),
+          h('label', { class: 'field' }, h('span', {}, t('provider')), sel(allProviders().map((p) => [p.id, `${p.user ? '★ ' : ''}${p.name}${p.region ? ` · ${p.region}` : ''}`]), e.provider, (v) => applyFormat(v, findProvider(v).formats[0].id))),
+          h('label', { class: 'field' }, h('span', {}, t('format')), sel(prov.formats.map((x) => [x.id, `${lab(x.label)} · ${x.w} × ${x.h} mm`]), e.format, (v) => applyFormat(e.provider, v)))),
+        h('div', { class: `profile-note st-${status}` },
+          h('b', {}, t(`st.${status}`)), ' ', prov.notes ? lab(prov.notes) : '',
+          prov.sources?.length ? h('div', { class: 'srcs' }, `${t('sources')}: `, ...prov.sources.map((u, i) => h('a', { href: u, target: '_blank', rel: 'noopener' }, `[${i + 1}]`)), prov.checked ? ` · ${t('checked')} ${prov.checked}` : '') : null),
         f.custom ? h('div', { class: 'grid3' }, num('w', `${t('width')} (mm)`, 1), num('h', `${t('height')} (mm)`, 1),
-          h('label', { class: 'field' }, h('span', {}, t('binding')), sel(Object.keys(prov.bindings).map((b) => [b, t(b)]), e.binding, (v) => { e.binding = v; Object.assign(e, { ...prov.bindings[v], cover: { ...prov.bindings[v].cover } }); draw(); }))) : null,
-        h('div', { class: 'grid3' }, num('spine', t('spine'), 0.1), num('ppi', t('resolution'), 10), num('pageStep', 'Seiten-Schritt', 1)),
-        h('small', { class: 'muted' }, t('spineHint', { n: existing?.pages.length ?? 0, e: estimateSpine(existing?.pages.length ?? 0, e.spinePerPage) })),
+          h('label', { class: 'field' }, h('span', {}, t('binding')), sel(Object.keys(prov.bindings).map((b) => [b, t(b)]), e.binding, (v) => { const fm = prov.formats.find((x) => x.binding === v) || f; applyFormat(e.provider, fm.id); e.binding = v; }))) : null,
+        papers.length ? h('label', { class: 'field' }, h('span', {}, t('paper')), sel(papers.map((x) => [x.id, lab(x.label)]), e.paper, (v) => applyFormat(e.provider, e.format, v))) : null,
+        h('fieldset', { class: 'box' }, h('legend', {}, t('spineAndCover')),
+          h('div', { class: 'spine-line' },
+            h('span', { class: 'big' }, `${sp.mm.toFixed(1)} mm`), ' ', h('span', { class: `tag ${sp.exact ? 'ok' : 'warn'}` }, srcLabel),
+            ' ', t('forPages', { n: preview.pages.length }),
+            ruleUrl && !sp.exact ? h('a', { href: ruleUrl, target: '_blank', rel: 'noopener', class: 'calc-link' }, t('printerCalc')) : null),
+          h('div', { class: 'muted small' }, t('coverSize', { w: cs.W.toFixed(1), h: cs.H.toFixed(1) })),
+          h('div', { class: 'grid2' },
+            h('label', { class: 'field' }, h('span', {}, t('spineManual')), h('input', { class: 'input num', type: 'number', step: 0.1, min: 0, value: e.spine ?? '', placeholder: sp.source !== 'manual' ? sp.mm.toFixed(1) : '', onchange: (ev) => { e.spine = ev.target.value === '' ? null : Number(ev.target.value); draw(); } })),
+            h('div', { class: 'field' }, h('span', {}, t('coverTemplate')),
+              e.coverTemplate ? h('div', { class: 'row' }, `${e.coverTemplate.W} × ${e.coverTemplate.H} mm `, h('button', { class: 'btn small', onclick: () => { delete e.coverTemplate; draw(); } }, t('remove')))
+                : h('button', { class: 'btn small', onclick: async () => {
+                  const file = await pickFile('application/pdf');
+                  if (!file) return;
+                  try {
+                    const r = await fetch('/api/cover-template/read', { method: 'POST', headers: { 'content-type': 'application/pdf', 'x-client': CLIENT }, body: file });
+                    const j = await r.json();
+                    if (!r.ok) throw new Error(j.error || r.statusText);
+                    e.coverTemplate = { W: j.W, H: j.H, source: 'pdf' }; toast(t('templateRead', { w: j.W, h: j.H })); draw();
+                  } catch (err) { alert(err.message); }
+                } }, t('importTemplate')))),
+          h('details', {}, h('summary', {}, t('coverDetails')),
+            h('div', { class: 'grid3' }, cnum('wrap', `${t('wrap')} (mm)`), cnum('overW', `${t('overW')} (mm)`), cnum('overH', `${t('overH')} (mm)`)),
+            h('div', { class: 'grid3' }, cnum('joint', `${t('joint')} (mm)`), cnum('hinge', `${t('hingeZone')} (mm)`),
+              h('label', { class: 'field' }, h('span', {}, t('coverMode')), sel([['spread', t('cmSpread')], ['none', t('cmNone')]], e.cover?.mode || 'spread', (v) => { e.cover = { ...e.cover, mode: v }; }))))),
+        h('fieldset', { class: 'box' }, h('legend', {}, t('interiorFile')),
+          h('div', { class: 'grid2' },
+            h('label', { class: 'field' }, h('span', {}, t('interiorLayout')), sel([['single', t('ilSingle')], ['spreads', t('ilSpreads')]], e.interior || 'single', (v) => { e.interior = v; draw(); })),
+            h('label', { class: 'field' }, h('span', {}, t('colourWanted')), h('div', { class: 'muted', style: { paddingTop: '8px' } }, e.colourWanted === 'srgb' ? 'sRGB' : 'CMYK'))),
+          h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!e.blankEnds, onchange: (ev) => { e.blankEnds = ev.target.checked; } }), ' ', t('blankEnds')),
+          h('div', { class: 'muted small' }, `${t('pageRules')}: ${pagesRule || '–'}`),
+          h('div', { class: 'grid3' }, num('bleed', `${t('bleed')} (mm)`), num('safety', `${t('safety')} (mm)`), num('glue', `${t('glue')} (mm)`))),
         h('div', { class: 'grid3' }, num('margin', `${t('margin')} (mm)`), num('gutter', `${t('gutter')} (mm)`), num('gap', `${t('gap')} (mm)`)),
-        h('div', { class: 'grid3' }, num('bleed', `${t('bleed')} (mm)`), num('safety', `${t('safety')} (mm)`), num('glue', `${t('glue')} (mm)`)),
-        h('div', { class: 'grid2' },
+        h('div', { class: 'grid3' },
           h('label', { class: 'field' }, h('span', {}, t('colorMode')), sel([['cmyk', t('cmyk')], ['rgb', t('rgb')]], e.colorMode, (v) => { e.colorMode = v; })),
-          h('label', { class: 'field' }, h('span', {}, t('icc')), sel(iccOpts, e.icc || '', (v) => { e.icc = v || null; }))),
+          h('label', { class: 'field' }, h('span', {}, t('icc')), sel(iccOpts, e.icc || '', (v) => { e.icc = v || null; })),
+          num('ppi', t('resolution'), 10)),
         h('div', { class: 'grid2' },
           h('label', { class: 'field' }, h('span', {}, t('pageNumbers')), sel([['none', t('pnNone')], ['outer', t('pnOuter')], ['center', t('pnCenter')]], e.pageNumbers || 'none', (v) => { e.pageNumbers = v; })),
           h('label', { class: 'field' }, h('span', {}, t('sharpen')), sel([['none', t('none')], ['low', t('shLow')], ['standard', t('shStandard')], ['high', t('shHigh')]], e.sharpen || 'standard', (v) => { e.sharpen = v; }))),
@@ -931,7 +1049,22 @@ function editionModal(existing) {
           h('label', { class: 'field' }, h('span', {}, t('font')), sel([['sans', t('sans')], ['serif', t('serif')]], e.font, (v) => { e.font = v; })),
           h('label', { class: 'field' }, h('span', {}, t('pageBg')), h('input', { class: 'input', type: 'color', value: e.bg || '#ffffff', onchange: (ev) => { e.bg = ev.target.value; } }))),
         isNew ? h('label', { class: 'field' }, h('span', {}, t('copyFrom')), sel([['', t('emptyEdition')], ...S.project.editions.map((x) => [x.id, x.name])], e.copyFrom, (v) => { e.copyFrom = v; })) : null,
-      );
+        h('div', { class: 'row' },
+          h('button', { class: 'btn small', onclick: () => { const pr = profileFromEdition({ ...e, pages: [] }, prompt(t('profileName'), `${prov.name} (${lab(f.label)})`) || undefined); downloadJson(`${pr.id}.billerbook-profile.json`, pr); } }, t('exportProfile')),
+          h('button', { class: 'btn small', onclick: async () => {
+            const file = await pickFile('application/json,.json');
+            if (!file) return;
+            try {
+              const pr = JSON.parse(await file.text());
+              const errs = validateProfile(pr);
+              if (errs.length) throw new Error(`${t('invalidProfile')}: ${errs.join(', ')}`);
+              pr.user = true;
+              await api('/api/profiles', { method: 'POST', body: pr });
+              await refreshProviders();
+              applyFormat(pr.id, pr.formats[0].id);
+            } catch (err) { alert(err.message); }
+          } }, t('importProfile'))),
+      ].filter(Boolean));
     };
     draw();
     return [
@@ -941,20 +1074,22 @@ function editionModal(existing) {
         h('button', { class: 'btn', onclick: close }, t('cancel')),
         h('button', { class: 'btn primary', onclick: () => {
           const patch = {};
-          for (const k of ['name', 'w', 'h', 'binding', 'bleed', 'safety', 'glue', 'cover', 'spine', 'spinePerPage', 'pageStep', 'margin', 'gutter', 'gap', 'ppi', 'colorMode', 'icc', 'font', 'bg', 'pageNumbers', 'sharpen']) patch[k] = e[k];
+          for (const k of EDIT_KEYS) patch[k] = structuredClone(e[k]);
+          const tpl = e.coverTemplate ? structuredClone(e.coverTemplate) : null;
           if (isNew) {
             mutate((p) => {
-              const ne = ops.addEdition(p, { name: e.name || t('edition'), provider: e.provider, format: e.format, copyFrom: e.copyFrom || undefined });
+              const ne = ops.addEdition(p, { name: e.name || t('edition'), provider: e.provider, format: e.format, paper: e.paper, copyFrom: e.copyFrom || undefined });
               const { name, ...rest } = patch;
               Object.assign(ne, rest, { provider: e.provider, format: e.format });
+              if (tpl) ne.coverTemplate = tpl;
               ops.normalize(ne);
             });
             S.ed = S.project.editions.length - 1; S.spread = 0;
-          } else mutate((p) => { const x = ops.getEdition(p, existing.id); Object.assign(x, patch, { provider: e.provider, format: e.format }); ops.normalize(x); });
+          } else mutate((p) => { const x = ops.getEdition(p, existing.id); Object.assign(x, patch, { provider: e.provider, format: e.format }); if (tpl) x.coverTemplate = tpl; else delete x.coverTemplate; ops.normalize(x); });
           renderAll(); loadPreflight(); close();
         } }, isNew ? t('create') : t('save'))),
     ];
-  });
+  }, { wide: true });
 }
 
 function autoModal() {
@@ -1052,6 +1187,12 @@ function bindGlobal() {
     const e = ed();
     const mod = ev.metaKey || ev.ctrlKey;
     if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+    if (mod && currentPage() != null) {
+      const k = ev.key.toLowerCase(), own = pageOwner(e, currentPage());
+      if (k === 'd') { ev.preventDefault(); return mutate((p) => ops.duplicatePages(p, e.id, own.owner, own.spread ? 2 : 1)); }
+      if (k === 'c' && ev.shiftKey) { ev.preventDefault(); S.layoutClip = own.owner; toast(t('copyLayout')); return; }
+      if (k === 'v' && ev.shiftKey && S.layoutClip != null) { ev.preventDefault(); return mutate((p) => ops.copyLayout(p, e.id, S.layoutClip, [own.owner])); }
+    }
     if (mod) return;
     if (ev.key === 'ArrowLeft') return go(-1);
     if (ev.key === 'ArrowRight') return go(1);

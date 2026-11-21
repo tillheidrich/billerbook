@@ -58,6 +58,32 @@ Each rule is written as observed behaviour, then what Billerbook does.
 15. **AI selects and arranges photos** (CEWE, Saal AI, Mixbook Story Mode, posterXXL Smart Assistant).
     Billerbook: no built-in cloud AI. Instead an MCP server, so you pick the assistant (Claude, Codex, local models) and it can look at each spread and correct it.
 
+## Feature parity with Lightroom's Book module and Blurb BookWright (0.10)
+
+| Feature | Lightroom Book module | Blurb BookWright | Billerbook |
+|---|---|---|---|
+| Auto layout from a selection | yes (presets) | – | yes, with time breaks, star rating and "only missing photos" |
+| Page layout templates | yes | yes | 23 layouts, re-flow on format change |
+| Save own page layouts | yes ("custom pages") | yes | yes (*Save as my layout*) |
+| Copy / paste a page layout | yes | – | yes, also to a range or all pages with the same photo count |
+| Duplicate page | – | yes | yes (⌘D), spreads stay whole |
+| Free placement of frames | no (cells fixed) | yes | yes, with snapping |
+| Zoom / move photo in frame | yes | yes | yes, plus smart crop |
+| Cell padding / page margin | yes | yes | margin and gap per edition and per page |
+| Page background colour | yes | yes | yes |
+| Background photo with opacity | yes ("graphic") | yes | yes |
+| Built-in background graphics | yes | yes | no |
+| Text from metadata | yes | – | yes |
+| Text style presets | yes | yes | font family and roles only (open) |
+| Page numbers, hide per page | yes | yes | yes |
+| Guides (bleed, safe area) | yes | yes | yes |
+| Several editions from one photo pool | no | no | yes |
+| Printers | Blurb, or PDF/JPEG | Blurb only | any printer that takes PDF; 8 profiles plus own profiles |
+| Spine from page count and paper | Blurb only | Blurb only | formula, table, template or entered value |
+| Interior as spreads | – | – | yes |
+| JPEG export of pages | yes | – | no (only the MCP spread preview) |
+| E-book export | – | yes | no |
+
 ## Gaps we closed in 0.9
 
 Smart crop, space-bar variants, free frames with snapping, captions from metadata, page numbers, output sharpening. Each has an acceptance test in `test/` or the UI test run.

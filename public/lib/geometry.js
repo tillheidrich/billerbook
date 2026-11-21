@@ -1,3 +1,4 @@
+import { spineFor } from './providers.js';
 // Shared geometry for browser and server. All sizes in mm, origin top-left.
 
 export const PT_PER_MM = 72 / 25.4;
@@ -41,23 +42,40 @@ export const sideOf = (i) => (i % 2 === 1 ? 'L' : 'R');
 
 // Cover canvas from the edition's print profile.
 // cover.wrap: bleed/turn-in around the cover (mm), cover.overW / overH: board overhang
-// beyond the trimmed block (hardcover), cover.hinge: hinge zone next to the spine.
-//   total width  = 2 · (w + overW) + spine + 2 · wrap
+// beyond the trimmed block (hardcover), cover.joint: extra width on each side of the spine
+// (IngramSpark, Mixam), cover.hinge: zone next to the spine to keep clear (drawn only).
+//   total width  = 2 · (w + overW) + 2 · joint + spine + 2 · wrap
 //   total height = h + 2 · overH + 2 · wrap
 // WIRmachenDRUCK hardcover: wrap 15, overW 5, overH 2.5 → (2w + 40 + B) × (h + 35)
 // WIRmachenDRUCK softcover: wrap 3, overhang 0         → (2w + B + 6) × (h + 6)
+// A cover template imported from the printer (ed.coverTemplate) wins: its page size is the cover size.
 export function coverSpec(ed) {
   const { w, h } = ed;
   const c = ed.cover || {};
-  const B = Math.max(0, Number(ed.spine) || 0);
-  const wrap = num(c.wrap, 3), overW = num(c.overW, 0), overH = num(c.overH, 0);
+  const wrap = num(c.wrap, 3), overW = num(c.overW, 0), overH = num(c.overH, 0), joint = num(c.joint, 0);
   const pw = w + overW;
-  const W = 2 * pw + B + 2 * wrap, H = h + 2 * overH + 2 * wrap;
+  let B = spineOf(ed).mm;
+  let W = 2 * pw + 2 * joint + B + 2 * wrap, H = h + 2 * overH + 2 * wrap;
+  const t = ed.coverTemplate;
+  if (t && t.W > 0 && t.H > 0) { W = t.W; H = t.H; B = Math.max(0, W - 2 * wrap - 2 * pw - 2 * joint); }
+  const sx = wrap + pw + joint;
   return {
-    W, H, bleed: wrap, hinge: num(c.hinge, 0), safety: num(ed.safety, 5),
+    W, H, bleed: wrap, hinge: num(c.hinge, 0), joint, safety: num(ed.safety, 5), spineMm: B,
     visible: { x: wrap, y: wrap, w: W - 2 * wrap, h: H - 2 * wrap },
-    back: { x: wrap, w: pw }, spine: { x: wrap + pw, w: B }, front: { x: wrap + pw + B, w: pw },
+    back: { x: wrap, w: pw }, spine: { x: sx, w: B }, front: { x: sx + B + joint, w: pw },
   };
+}
+
+// Spine width actually used for this edition: manual value, cover template, printer rule or estimate.
+export function spineOf(ed) {
+  if (ed.coverTemplate?.W > 0) {
+    const c = ed.cover || {};
+    const B = ed.coverTemplate.W - 2 * num(c.wrap, 3) - 2 * (ed.w + num(c.overW, 0)) - 2 * num(c.joint, 0);
+    return { mm: Math.max(0, Math.round(B * 100) / 100), exact: true, source: 'template' };
+  }
+  if (ed.spine != null && ed.spine !== '' && Number.isFinite(Number(ed.spine))) return { mm: Number(ed.spine), exact: true, source: 'manual' };
+  const rule = ed.spineRule || { type: 'printer', perPage: ed.spinePerPage || 0.08 };
+  return spineFor(rule, ed.pages?.length || 0);
 }
 const num = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v != null ? Number(v) : d);
 

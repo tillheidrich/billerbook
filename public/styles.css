@@ -250,3 +250,26 @@ html.desktop .top button, html.desktop .top input, html.desktop .top select, htm
 .welcome img { width: 72px; height: 72px; }
 .welcome p { margin: 4px 0 0; }
 body.no-project #autoBtn, body.no-project #exportBtn { visibility: hidden; }
+
+/* 0.10: print profiles, page extras */
+.page .bgphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.profile-note{font-size:12.5px;line-height:1.5;color:oklch(82% .01 80);padding:10px 12px;border-radius:8px;background:oklch(26% .012 60)}
+.profile-note b{color:oklch(95% .01 80)}
+.profile-note.st-verified b{color:oklch(78% .14 150)}
+.profile-note.st-partial b{color:var(--amber,oklch(78% .15 70))}
+.profile-note .srcs{margin-top:4px}
+.profile-note .srcs a{color:inherit;margin-right:6px}
+fieldset.box{border:1px solid var(--line,oklch(100% 0 0 / .1));border-radius:10px;padding:10px 12px 12px;display:grid;gap:10px;margin:0}
+fieldset.box legend{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:oklch(78% .01 80);padding:0 6px}
+.spine-line{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.spine-line .big{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.tag{font-size:11px;padding:2px 7px;border-radius:99px;background:oklch(100% 0 0 / .08)}
+.tag.ok{color:oklch(80% .14 150)}
+.tag.warn{color:oklch(80% .15 70)}
+.calc-link{font-size:12px;margin-left:auto}
+.small{font-size:12px}
+label.check{display:flex;align-items:center;gap:6px;font-size:13px}
+details.page-more summary{cursor:pointer;font-size:12px;color:oklch(75% .01 80);padding:4px 0}
+details.page-more[open]{display:grid;gap:10px}
+img.bgthumb{width:48px;height:32px;object-fit:cover;border-radius:3px}
+.lay.mine{outline:1px dashed oklch(78% .15 70 / .5);outline-offset:-2px}

@@ -7,10 +7,13 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { execFile } from 'node:child_process';
+import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as ops from './public/lib/ops.js';
-import { PROVIDERS } from './public/lib/providers.js';
+import { loadProfiles, saveProfile, deleteProfile, providers, readCoverTemplate } from './lib/profiles.mjs';
 import { LAYOUT_ORDER, COVER_ORDER } from './public/lib/layouts.js';
+import { findProvider, profileFromEdition } from './public/lib/providers.js';
+import { spineOf, coverSpec } from './public/lib/geometry.js';
 import { listProjects, loadProject, saveProject, createProject, buildPool, dropPool, thumbnail, uploadDir, focalProgress, DATA } from './lib/store.mjs';
 import { listCollections, readLightroomBook, bookToPages } from './lib/catalog.mjs';
 import { exportInterior, exportCover } from './lib/pdf.mjs';
@@ -89,6 +92,12 @@ const OPS = {
     dropPool(p.id);
     return { keys: (a.paths || []).filter((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } }).map((f) => `f:${f}`) };
   },
+  setCoverTemplate: (p, a) => { const ed = ops.getEdition(p, a.edition); if (a.W > 0 && a.H > 0) ed.coverTemplate = { W: Number(a.W), H: Number(a.H), source: a.source || 'manual' }; else delete ed.coverTemplate; ops.normalize(ed); return { cover: ed.coverTemplate || null, spine: ed.spineCalc }; },
+  duplicatePages: (p, a) => ops.duplicatePages(p, a.edition, a.from, a.count),
+  copyLayout: (p, a) => ops.copyLayout(p, a.edition, a.from, a.to),
+  saveCustomLayout: (p, a) => ops.saveCustomLayout(p, a.edition, a.page, a.name),
+  applyCustomLayout: (p, a) => ops.applyCustomLayout(p, a.edition, a.page, a.id),
+  deleteCustomLayout: (p, a) => ops.deleteCustomLayout(p, a.id),
   setSources: (p, a) => { p.sources = { ...p.sources, ...a.sources }; dropPool(p.id); },
   rename: (p, a) => { p.name = a.name; },
 };
@@ -118,6 +127,67 @@ async function applyOp(id, op, args, by) {
   return withProject(id, (p) => OPS[op](p, args || {}), by);
 }
 
+function printSpecs(ed) {
+  const prov = findProvider(ed.provider);
+  const sp = spineOf(ed), cs = coverSpec(ed);
+  const r = (v) => Math.round(v * 100) / 100;
+  const n = ed.pages.length;
+  return {
+    printShop: prov.name, profileStatus: ed.profileStatus, format: ed.format, binding: ed.binding, paper: ed.paper,
+    trim_mm: { w: ed.w, h: ed.h }, bleed_mm: ed.bleed, safety_mm: ed.safety, glue_mm: ed.glue,
+    interior: {
+      layout: ed.interior, blankEnds: ed.blankEnds, pages: n,
+      pdfPages: ed.interior === 'spreads' ? Math.ceil((n + 1) / 2) : n,
+      pdfPage_mm: ed.interior === 'spreads' ? { w: r(2 * ed.w + 2 * ed.bleed), h: r(ed.h + 2 * ed.bleed) } : { w: r(ed.w + 2 * ed.bleed), h: r(ed.h + 2 * ed.bleed) },
+      rules: { min: ed.pageMin, max: ed.pageMax, step: ed.pageStep }, colour: ed.colourWanted, colorMode: ed.colorMode,
+    },
+    spine: { mm: r(sp.mm), source: sp.source, exact: sp.exact, printerCalculator: sp.url || ed.spineRule?.url || null, textFromPages: ed.spineTextMin || null },
+    cover: {
+      mode: ed.cover?.mode || 'spread', template: ed.coverTemplate || null, pdf_mm: { w: r(cs.W), h: r(cs.H) },
+      wrap: cs.bleed, joint: cs.joint, hinge: cs.hinge,
+      panels_mm: { back: { x: r(cs.back.x), w: r(cs.back.w) }, spine: { x: r(cs.spine.x), w: r(cs.spine.w) }, front: { x: r(cs.front.x), w: r(cs.front.w) } },
+    },
+    sources: prov.sources,
+  };
+}
+
+const clean = (v) => String(v ?? '').replace(/[\t\n\r]+/g, ' ');
+
+// Copies the Lightroom Classic plug-in into Lightroom's Modules folder, where Lightroom loads it on start.
+async function installLightroomPlugin() {
+  const src = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lightroom', 'Billerbook.lrplugin');
+  const base = process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Application Support', 'Adobe', 'Lightroom', 'Modules')
+    : path.join(process.env.APPDATA || os.homedir(), 'Adobe', 'Lightroom', 'Modules');
+  const dest = path.join(base, 'Billerbook.lrplugin');
+  await fsp.mkdir(base, { recursive: true });
+  await fsp.cp(src, dest, { recursive: true, force: true });
+  return { installed: dest, note: 'Restart Lightroom Classic. Then: Library › Plug-in Extras › Billerbook.' };
+}
+
+async function lightroomUsage({ missing = false } = {}) {
+  const out = [];
+  for (const meta of await listProjects()) {
+    let pr; try { pr = await loadProject(meta.id); } catch { continue; }
+    for (const ed of pr.editions) {
+      const keys = new Set();
+      for (const pg of ed.pages) for (const s of pg.slots || []) if (s?.key) keys.add(s.key);
+      for (const s of ed.coverDesign?.slots || []) if (s?.key) keys.add(s.key);
+      const ids = [], files = [];
+      for (const k of keys) { if (k.startsWith('lr:')) ids.push(k.slice(3)); else if (k.startsWith('f:')) files.push(k.slice(2)); }
+      const row = { projectId: pr.id, project: pr.name, editionId: ed.id, edition: ed.name, ids, files, pages: ed.pages.length };
+      if (missing && pr.sources?.lightroom?.catalog) {
+        try {
+          const pool = await buildPool(pr);
+          const used = new Set(ids);
+          row.missing = pool.items.filter((it) => it.key.startsWith('lr:') && !used.has(it.key.slice(3))).map((it) => it.key.slice(3));
+        } catch { row.missing = []; }
+      }
+      out.push(row);
+    }
+  }
+  return out;
+}
+
 // ---------- jobs (export) ----------
 const jobs = new Map();
 function startExport(project, edId, { parts = ['interior', 'cover'], preview = false, outDir } = {}) {
@@ -131,13 +201,13 @@ function startExport(project, edId, { parts = ['interior', 'cover'], preview = f
       await fsp.mkdir(dir, { recursive: true });
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
       const base = `${slug(project.name)}_${slug(ed.name)}_${stamp}${preview ? '_vorschau' : ''}`;
-      job.total = (parts.includes('interior') ? ed.pages.length : 0) + (parts.includes('cover') ? 1 : 0);
+      job.total = (parts.includes('interior') ? ed.pages.length : 0) + (parts.includes('cover') && ed.cover?.mode !== 'none' ? 1 : 0);
       if (parts.includes('interior')) {
-        const r = await exportInterior({ ed, pool: pool.map, file: path.join(dir, `${base}_inhalt.pdf`), preview, title: `${project.name} – ${ed.name}`, onProgress: (d) => { job.done = d; } });
+        const r = await exportInterior({ ed, pool: pool.map, file: path.join(dir, `${base}_interior.pdf`), preview, title: `${project.name} – ${ed.name}`, onProgress: (d) => { job.done = d; } });
         job.files.push({ part: 'interior', ...r });
       }
-      if (parts.includes('cover')) {
-        const r = await exportCover({ ed, pool: pool.map, file: path.join(dir, `${base}_umschlag.pdf`), preview, title: `${project.name} – ${ed.name} – Umschlag` });
+      if (parts.includes('cover') && ed.cover?.mode !== 'none') {
+        const r = await exportCover({ ed, pool: pool.map, file: path.join(dir, `${base}_cover.pdf`), preview, title: `${project.name} – ${ed.name} – Umschlag` });
         job.files.push({ part: 'cover', ...r });
         job.done++;
       }
@@ -198,10 +268,59 @@ async function route(req, res) {
     return json(res, {
       app: 'Billerbook', version: PKG.version, platform: process.platform, data: DATA, node: process.version, mcp: mcpConfig(),
       icc: ICC_CANDIDATES.filter((f) => fs.existsSync(f)),
-      providers: PROVIDERS, layouts: LAYOUT_ORDER, coverLayouts: COVER_ORDER,
+      providers: providers(), layouts: LAYOUT_ORDER, coverLayouts: COVER_ORDER,
     });
   }
   if (p === '/api/projects' && req.method === 'GET') return json(res, await listProjects());
+  if (p === '/api/profiles' && req.method === 'GET') return json(res, providers());
+  if (p === '/api/profiles' && req.method === 'POST') { const pr = saveProfile(await body(req)); broadcast({ type: 'profiles' }); return json(res, pr); }
+  if ((m = p.match(/^\/api\/profiles\/([\w-]+)$/)) && req.method === 'DELETE') { deleteProfile(m[1]); broadcast({ type: 'profiles' }); return json(res, { ok: true }); }
+  // Lightroom plug-in: which photos are in which edition (Lightroom ids and file paths).
+  if (p === '/api/lightroom/usage') return json(res, await lightroomUsage());
+  // Same data as tab-separated lines, easy to parse in Lightroom's Lua: H hash, E project edition id, I lr-uuid, F path, M missing lr-uuid
+  if (p === '/api/lightroom/usage.txt') {
+    const u = await lightroomUsage({ missing: true });
+    const lines = [];
+    for (const x of u) {
+      lines.push(['E', clean(x.project), clean(x.edition), x.editionId].join('\t'));
+      for (const id of x.ids) lines.push(`I\t${id}`);
+      for (const f of x.files) lines.push(`F\t${clean(f)}`);
+      for (const id of x.missing || []) lines.push(`M\t${id}`);
+    }
+    const body = lines.join('\n');
+    const hash = crypto.createHash('sha1').update(body).digest('hex').slice(0, 12);
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end(`H\t${hash}\n${body}\n`);
+  }
+  if (p === '/api/lightroom/install-plugin' && req.method === 'POST') return json(res, await installLightroomPlugin());
+  // Only reads a cover template (the editor applies it itself when the edition is saved).
+  if (p === '/api/cover-template/read' && req.method === 'POST') {
+    const b = await body(req);
+    const bytes = Buffer.isBuffer(b) ? b : b.path ? await fsp.readFile(b.path) : null;
+    if (!bytes) throw httpError(400, 'send the template PDF as the request body');
+    return json(res, await readCoverTemplate(bytes));
+  }
+  if ((m = p.match(/^\/api\/project\/([\w-]+)\/print-specs$/))) {
+    const pr = await loadProject(m[1]);
+    const ed = ops.getEdition(pr, url.searchParams.get('edition') ?? 0);
+    ops.migrateEdition(ed);
+    return json(res, printSpecs(ed));
+  }
+  if ((m = p.match(/^\/api\/project\/([\w-]+)\/profile-from-edition$/))) {
+    const pr = await loadProject(m[1]);
+    const ed = ops.getEdition(pr, url.searchParams.get('edition') ?? 0);
+    ops.migrateEdition(ed);
+    return json(res, profileFromEdition(ed, url.searchParams.get('name') || undefined));
+  }
+  if ((m = p.match(/^\/api\/project\/([\w-]+)\/cover-template$/)) && req.method === 'POST') {
+    const edition = url.searchParams.get('edition');
+    const b = await body(req);
+    const bytes = Buffer.isBuffer(b) ? b : b.path ? await fsp.readFile(b.path) : null;
+    if (!bytes) throw httpError(400, 'send the template PDF as the request body or { path }');
+    const t = await readCoverTemplate(bytes);
+    const r = await applyOp(m[1], 'setCoverTemplate', { edition, W: t.W, H: t.H, source: 'pdf' }, by);
+    return json(res, { template: t, ...r });
+  }
   if (p === '/api/projects' && req.method === 'POST') {
     const b = await body(req);
     const pr = await createProject(b);
@@ -331,6 +450,7 @@ async function route(req, res) {
 }
 
 export function start({ port = PORT, open = false } = {}) {
+  loadProfiles();
   const server = http.createServer(async (req, res) => {
     // Only local clients.
     const host = (req.headers.host || '').split(':')[0];

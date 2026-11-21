@@ -26,15 +26,17 @@ Open source · macOS app · works with Lightroom Classic or any folder · print-
 
 **Free frames when you need them.** Turn any layout into free frames, then Alt+drag to move and drag the corner to resize. Frames snap to margins, centre and gutter.
 
-**Lightroom Classic, read-only.** Billerbook reads the catalog (also while Lightroom is open), uses your collections as the photo pool, shows Lightroom's previews and picks up captions. Books made in Lightroom's Book module can be imported with their pages, photo positions and crops. Nothing is ever written back to the catalog.
+**Lightroom Classic, both ways.** Billerbook reads the catalog (also while Lightroom is open), uses your collections as the photo pool, shows Lightroom's previews and picks up captions. Books made in Lightroom's Book module can be imported with their pages, photo positions and crops. Billerbook itself never writes to the catalog. The optional Lightroom plug-in does, and only one thing: it keeps a collection per edition under *Billerbook* in the Collections panel, plus a *missing* collection with the photos that are not in the book yet. So you see in Lightroom which photos are in the book.
+
+**Everything the Book module does, and more.** Duplicate pages (`⌘D`), copy a page layout and paste it on other pages (`⇧⌘C`, `⇧⌘V`) or on every page with the same number of photos, save your own layouts, a background photo with opacity per page, page margin and photo gap per page, page numbers with per-page hiding.
 
 **No Lightroom needed.** Any folder of JPEG, TIFF, PNG or WebP works. Capture date, star rating and caption come from EXIF/XMP/IPTC.
 
-**Print-ready PDF.** Interior and cover as separate files with bleed, TrimBox/BleedBox, CMYK with an ICC output intent (e.g. FOGRA39) or RGB, resampling to the target resolution, output sharpening, page numbers, and a cover with spine and turn-in calculated from the print profile. The PDF is written page by page, so a 500-page book does not need gigabytes of memory.
+**Print-ready PDF for the printer you choose.** Interior as single pages or as spreads (one PDF page per double page, as Saal Digital wants), cover as one sheet with back, spine and front. Bleed, TrimBox/BleedBox, CMYK with an ICC output intent (e.g. FOGRA39) or sRGB, resampling to the target resolution and output sharpening. The spine width follows from page count and paper: from the printer's published formula (KDP, Lulu), its table (Lulu hardcover), the cover template you download from the printer, or the value you enter. The PDF is written page by page, so a 500-page book does not need gigabytes of memory.
 
-**Preflight before you pay.** Empty frames, low resolution, missing print files, photos in the glue zone, page count and spine width are checked before export.
+**Preflight before you pay.** Empty frames, low resolution, missing print files, photos in the glue zone, page count limits per printer and paper, an estimated spine width, spine text on too thin a book and the wrong colour space are checked before export.
 
-**Ask your AI to lay it out.** Billerbook ships an MCP server with 28 tools. Claude, Codex, Cursor or any other MCP client can create a project from a folder, fill pages, look at each spread as an image, fix what looks off, run preflight and export. Changes appear live in the app.
+**Ask your AI to lay it out.** Billerbook ships an MCP server with 35 tools, so an assistant can do everything the app does, including choosing the print shop and paper, importing the cover template, duplicating pages and copying layouts. Claude, Codex, Cursor or any other MCP client can create a project from a folder, fill pages, look at each spread as an image, fix what looks off, run preflight and export. Changes appear live in the app.
 
 | | |
 |---|---|
@@ -43,18 +45,25 @@ Open source · macOS app · works with Lightroom Classic or any folder · print-
 
 ## Print shops
 
-Billerbook writes standard print PDFs, so it works with any print shop that accepts PDF uploads. Print profiles hold the numbers that differ between shops: bleed, safety margin, glue zone and the cover formula.
+Billerbook writes standard print PDFs, so it works with any print shop that accepts PDF uploads. Print profiles hold what differs between shops: page sizes, bleed, single pages or spreads, page count rules, the spine rule per paper and the cover measurements.
 
-| Profile | Status |
-|---|---|
-| WIRmachenDRUCK (hardcover and softcover, 12 formats) | verified against the shop's data sheets |
-| Custom (any size, hardcover / softcover / layflat) | every value editable |
+| Print shop | Region | Profile |
+|---|---|---|
+| WIRmachenDRUCK | DE · AT · CH | verified against data sheets and printed books |
+| Amazon KDP | worldwide | paperback verified (published spine formula), hardcover via KDP template |
+| Lulu | worldwide | paperback verified, hardcover spine table; casewrap via Lulu template |
+| Blurb (PDF to Book) | worldwide | interior rules verified, cover via Blurb template |
+| IngramSpark | worldwide | case laminate wrap and hinge verified, spine via template |
+| Mixam | UK · US · DE · AU · CA | cover measurements verified, spine from the cart |
+| Saal Digital Professional Line | EU · UK · US | spreads, blank first and last page, sRGB; cover via template |
+| PrestoPhoto | US · worldwide | interior rules verified, cover via template |
+| Custom | any | every value editable, export and share as a profile |
 
-Want your print shop in the list? See [docs/print-profiles.md](docs/print-profiles.md). A profile needs a link to the shop's own specification.
+Any other print shop: download its cover template and import it, or enter its numbers once and export them as a profile. See [docs/print-profiles.md](docs/print-profiles.md) for the fields and sources.
 
 ## Install
 
-**Mac:** download the DMG for Apple silicon or Intel from [Releases](https://github.com/tillheidrich/billerbook/releases/latest). The app is signed and updates itself. Version 0.9.0 is not yet notarized by Apple: on first launch, right-click Billerbook in Applications and choose *Open* (or allow it under System Settings → Privacy & Security).
+**Mac:** download the DMG for Apple silicon or Intel from [Releases](https://github.com/tillheidrich/billerbook/releases/latest). The app is signed and updates itself. Until Apple has notarized a release, open it the first time with right-click › *Open* (or allow it under System Settings › Privacy & Security).
 
 **From source (macOS, Linux, Windows):** Node.js 22.13 or newer.
 
@@ -88,7 +97,18 @@ Projects live in `~/Library/Application Support/Billerbook` on macOS (`~/.biller
 | + / − | zoom inside the frame |
 | Del | remove photo |
 | Alt + drag | move a free frame |
+| ⌘D | duplicate page or spread |
+| ⇧⌘C / ⇧⌘V | copy layout / paste layout on this page |
 | ⌘Z / ⇧⌘Z | undo / redo |
+
+## Lightroom plug-in
+
+*File › Install Lightroom Classic Plug-in…* in the Mac app (or the button in *Sources*) copies the plug-in into Lightroom's Modules folder. After restarting Lightroom Classic you find, in the Collections panel:
+
+- **Billerbook › your project › Hardcover**: the photos in that edition
+- **Billerbook › your project › Hardcover – missing**: photos from the project's Lightroom collections that are not in it yet
+
+The plug-in updates them every 20 seconds while Billerbook is open (switch this off in the Plug-in Manager), or on demand with *Library › Plug-in Extras › Sync book collections now*. It only creates and fills these collections. Source: [`lightroom/Billerbook.lrplugin`](lightroom/Billerbook.lrplugin).
 
 ## AI / MCP
 

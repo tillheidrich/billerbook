@@ -3,7 +3,7 @@
 
 import { editionSpecFrom } from './providers.js';
 import { LAYOUTS, slotCount, isSpreadPage, buildFrames, pageOwner, coverFrames, alternativesFor } from './layouts.js';
-import { placement, estimateSpine } from './geometry.js';
+import { placement, spineOf } from './geometry.js';
 
 export const rid = () => Math.random().toString(36).slice(2, 10);
 const EDITION_COLORS = ['#e0a458', '#6aa9e9', '#8fcb7a', '#d77fb3', '#b59cf0', '#e9776a'];
@@ -14,10 +14,10 @@ export function newProject(name = 'Photo book') {
 }
 
 export function addEdition(project, opts = {}) {
-  const spec = editionSpecFrom(opts.provider || 'wmd', opts.format || 'hc-a4-quer');
+  const spec = editionSpecFrom(opts.provider || 'wmd', opts.format || 'hc-a4-quer', opts.paper);
   const ed = {
     id: rid(), name: opts.name || 'Edition', color: EDITION_COLORS[project.editions.length % EDITION_COLORS.length],
-    ...spec, spine: null, margin: 12, gutter: 6, gap: 4, ppi: 300, colorMode: 'cmyk', icc: null,
+    ...spec, spine: null, margin: 12, gutter: 6, gap: 4, ppi: 300, colorMode: spec.colourWanted === 'srgb' ? 'rgb' : 'cmyk', icc: null,
     font: 'sans', bg: '#ffffff', pageNumbers: 'none', sharpen: 'standard', pages: [], coverDesign: { layout: 'cover-front', slots: [], texts: [] },
   };
   if (opts.copyFrom) {
@@ -61,12 +61,36 @@ export function getEdition(project, id) {
 export function updateEdition(project, edId, patch) {
   const ed = getEdition(project, edId);
   if (patch.provider || patch.format) {
-    Object.assign(ed, editionSpecFrom(patch.provider || ed.provider, patch.format || ed.format));
+    const providerChanged = patch.provider && patch.provider !== ed.provider;
+    Object.assign(ed, editionSpecFrom(patch.provider || ed.provider, patch.format || ed.format, patch.paper || ed.paper));
+    if (providerChanged) ed.colorMode = ed.colourWanted === 'srgb' ? 'rgb' : 'cmyk';
+    delete ed.coverTemplate;
+  } else if (patch.paper && patch.paper !== ed.paper) {
+    const spec = editionSpecFrom(ed.provider, ed.format, patch.paper);
+    ed.paper = spec.paper;
+    ed.spineRule = spec.spineRule;
+    ed.pageMax = spec.pageMax;
+    delete ed.coverTemplate;
   }
   const allowed = ['name', 'w', 'h', 'binding', 'bleed', 'safety', 'glue', 'cover', 'spine', 'spinePerPage', 'pageStep',
-    'margin', 'gutter', 'gap', 'ppi', 'colorMode', 'icc', 'font', 'bg', 'color', 'pageNumbers', 'sharpen'];
+    'margin', 'gutter', 'gap', 'ppi', 'colorMode', 'icc', 'font', 'bg', 'color', 'pageNumbers', 'sharpen',
+    'interior', 'blankEnds', 'pageMin', 'pageMax', 'colourWanted', 'spineTextMin', 'spineRule', 'coverTemplate', 'cellPadding', 'bgPhoto', 'guides', 'textStyle'];
   for (const k of allowed) if (k in patch && !['provider', 'format'].includes(k)) ed[k] = patch[k];
   normalize(ed);
+  return ed;
+}
+
+// Editions saved before 0.10 have no spine rule or interior mode.
+export function migrateEdition(ed) {
+  if (!ed.spineRule) ed.spineRule = { type: 'printer', perPage: ed.spinePerPage || 0.08 };
+  if (!ed.interior) ed.interior = 'single';
+  if (ed.blankEnds == null) ed.blankEnds = false;
+  if (!ed.cover) ed.cover = { mode: 'spread', wrap: 3, overW: 0, overH: 0, joint: 0, hinge: 0 };
+  if (ed.cover.mode == null) ed.cover.mode = 'spread';
+  if (ed.cover.joint == null) ed.cover.joint = 0;
+  if (ed.pageMin === undefined) ed.pageMin = null;
+  if (ed.pageMax === undefined) ed.pageMax = null;
+  if (!ed.colourWanted) ed.colourWanted = 'cmyk';
   return ed;
 }
 
@@ -92,7 +116,10 @@ export function normalize(ed) {
       if (p.slots.length > n) p.slots.length = n;
     } else p.slots = p.slots.filter(Boolean);
   }
-  if (ed.spine == null && ed.pages.length) ed.spineEstimate = estimateSpine(ed.pages.length, ed.spinePerPage);
+  migrateEdition(ed);
+  const sp = spineOf(ed);
+  ed.spineCalc = sp;
+  ed.spineEstimate = sp.exact ? null : sp.mm;
   return ed;
 }
 
@@ -198,7 +225,10 @@ export function setText(project, edId, page, idx, value) {
 export function setPageProps(project, edId, page, patch) {
   const ed = getEdition(project, edId);
   const p = ed.pages[pageOwner(ed, page).owner];
-  for (const k of ['bg']) if (k in patch) p[k] = patch[k];
+  for (const k of ['bg', 'margin', 'gap', 'bgPhoto', 'hideNumber']) {
+    if (!(k in patch)) continue;
+    if (patch[k] === null || patch[k] === '') delete p[k]; else p[k] = patch[k];
+  }
 }
 
 // One key press: this photo becomes a full-bleed page (or spread on a left page if wide enough).
@@ -288,7 +318,14 @@ export function preflight(project, edId, poolMap) {
   const aspectOf = (k) => { const it = poolMap.get(k); return it?.w ? it.w / it.h : null; };
   const n = ed.pages.length;
   if (ed.pageStep && n % ed.pageStep) out.push({ level: 'error', code: 'page-step', params: { n, step: ed.pageStep } });
-  if (!ed.spine) out.push({ level: 'warn', code: 'no-spine', params: { est: ed.spineEstimate } });
+  if (ed.pageMin && n < ed.pageMin) out.push({ level: 'error', code: 'page-min', params: { n, min: ed.pageMin } });
+  if (ed.pageMax && n > ed.pageMax) out.push({ level: 'error', code: 'page-max', params: { n, max: ed.pageMax } });
+  const sp = spineOf(ed);
+  if (!sp.exact) out.push({ level: 'warn', code: 'no-spine', params: { est: sp.mm, url: sp.url || ed.spineRule?.url || '' } });
+  const sf = coverFrames(ed).frames.find((f) => f.kind === 'text' && f.role === 'spine');
+  const spineText = !!(sf && ed.coverDesign?.texts?.[sf.text]?.value?.trim());
+  if (ed.spineTextMin && n < ed.spineTextMin && spineText) out.push({ level: 'warn', code: 'spine-text', params: { n, min: ed.spineTextMin } });
+  if (ed.colourWanted === 'srgb' && ed.colorMode === 'cmyk') out.push({ level: 'warn', code: 'colour-mode', params: { want: 'sRGB' } });
   const glue = ed.glue || 0;
   for (let i = 0; i < n; i++) {
     const o = pageOwner(ed, i);
@@ -410,4 +447,91 @@ export function fillCaptions(project, edId, captionOf, { page = null } = {}) {
     }
   });
   return { filled };
+}
+
+// ---------- Book-module parity: duplicate pages, copy layouts, saved layouts ----------
+
+// Inserts copies of pages [from, from + count) right after them. A spread is always copied whole.
+export function duplicatePages(project, edId, from, count = 1) {
+  const ed = getEdition(project, edId);
+  let start = from, n = Math.max(1, count);
+  if (ed.pages[start]?.spanned) { start -= 1; n += 1; }
+  if (isSpreadPage(ed.pages[start + n - 1])) n += 1;
+  let copies = structuredClone(ed.pages.slice(start, start + n)).map((p) => ({ ...p, id: rid() }));
+  let at = start + n;
+  // Spreads must start on a left page (odd index); pad with a blank page if the copy would land wrong.
+  if (copies.some((p) => isSpreadPage(p)) && (at % 2) !== (start % 2)) copies = [newPage('leer'), ...copies];
+  ed.pages.splice(at, 0, ...copies);
+  normalize(ed);
+  return { at, count: copies.length };
+}
+
+const LAYOUT_PROPS = ['layout', 'variant', 'frames', 'spread', 'bg', 'margin', 'gap', 'bgPhoto'];
+
+// Applies the layout of page `from` to every page in `to` (array of indexes), keeping their photos.
+export function copyLayout(project, edId, from, to = []) {
+  const ed = getEdition(project, edId);
+  const src = ed.pages[pageOwner(ed, from).owner];
+  const srcSpread = isSpreadPage(src);
+  let changed = 0;
+  for (const i of [].concat(to)) {
+    const o = pageOwner(ed, i).owner;
+    const p = ed.pages[o];
+    if (!p || p === src) continue;
+    if (srcSpread && o % 2 === 0) continue; // a spread layout fits left pages only
+    const keys = (p.slots || []).filter(Boolean);
+    for (const k of LAYOUT_PROPS) { if (src[k] === undefined) delete p[k]; else p[k] = structuredClone(src[k]); }
+    p.slots = keys;
+    const n = slotCount(p.layout);
+    if (n != null) { while (p.slots.length < n) p.slots.push(null); }
+    if (p.layout === 'frei') {
+      const imgs = (p.frames || []).filter((f) => (f.kind || 'image') === 'image').length;
+      while (p.slots.length < imgs) p.slots.push(null);
+      p.slots.length = Math.max(imgs, 0);
+    }
+    changed++;
+  }
+  normalize(ed);
+  return { changed };
+}
+
+// Saves the arrangement of a page as a reusable layout ("custom page" in Lightroom's Book module).
+export function saveCustomLayout(project, edId, page, name) {
+  const ed = getEdition(project, edId);
+  const o = pageOwner(ed, page).owner;
+  const p = ed.pages[o];
+  const spread = isSpreadPage(p);
+  const W = spread ? 2 * ed.w : ed.w, H = ed.h;
+  const frames = p.layout === 'frei' && p.frames ? structuredClone(p.frames)
+    : buildFrames(ed, o).map((f) => ({ kind: f.kind, role: f.role, x: f.x / W, y: f.y / H, w: f.w / W, h: f.h / H }));
+  project.customLayouts ||= [];
+  const item = { id: rid(), name: name || `Layout ${project.customLayouts.length + 1}`, spread, frames, photos: frames.filter((f) => f.kind === 'image').length };
+  project.customLayouts.push(item);
+  return item;
+}
+
+export function applyCustomLayout(project, edId, page, id) {
+  const ed = getEdition(project, edId);
+  const L = (project.customLayouts || []).find((x) => x.id === id || x.name === id);
+  if (!L) throw new Error(`layout not found: ${id}`);
+  const o = pageOwner(ed, page).owner;
+  if (L.spread && o % 2 === 0) throw new Error('spread layouts start on a left page');
+  const p = ed.pages[o];
+  const keys = (p.slots || []).filter(Boolean);
+  p.layout = 'frei';
+  p.frames = structuredClone(L.frames);
+  if (L.spread) p.spread = true; else delete p.spread;
+  delete p.variant;
+  p.slots = keys.slice(0, L.photos);
+  while (p.slots.length < L.photos) p.slots.push(null);
+  const texts = L.frames.filter((f) => f.kind === 'text').length;
+  p.texts = (p.texts || []).slice(0, texts);
+  while (p.texts.length < texts) p.texts.push({ value: '' });
+  normalize(ed);
+  return { page: o, photos: L.photos };
+}
+
+export function deleteCustomLayout(project, id) {
+  project.customLayouts = (project.customLayouts || []).filter((x) => x.id !== id);
+  return { ok: true };
 }
