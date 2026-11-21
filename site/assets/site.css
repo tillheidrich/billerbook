@@ -32,7 +32,7 @@ a{color:inherit}
 
 /* type */
 .display,h1,h2{font-family:var(--sans);font-weight:800;font-stretch:68%;letter-spacing:-.01em;text-transform:none;margin:0}
-h1{font-size:clamp(3.4rem,9.5vw,9rem);line-height:.92}
+h1{font-size:clamp(3.4rem,8.6vw,8.25rem);line-height:.98}
 h2{font-size:clamp(2.6rem,5.6vw,5.2rem);line-height:.95}
 h3{font:700 1.35rem/1.2 var(--sans);font-stretch:85%;margin:0 0 .5rem}
 h1 .hl,h2 .hl{color:var(--red)}
