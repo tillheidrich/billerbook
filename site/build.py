@@ -575,7 +575,7 @@ def foot(t, root, cur):
     cols = "".join(f'<div><h2>{esc(h)}</h2><ul>{"".join(f"<li><a href=\"{u[i]}\">{esc(n)}</a></li>" for i, n in items)}</ul></div>' for h, items in k['foot_cols'])
     return f"""<footer>
  <div class="cols">
-  <div><a class="mark" href="{u['home']}" style="display:inline-flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);font-weight:500">{LOGO.format(root=root)}Billerbook</a><p style="max-width:300px;margin:12px 0 0">{esc(k['foot_about'])}</p></div>
+  <div><a class="mark u-mark" href="{u['home']}">{LOGO.format(root=root)}Billerbook</a><p class="u-about">{esc(k['foot_about'])}</p></div>
   {cols}
  </div>
  <div class="base"><span>{esc(k['foot_base'])}</span><span>Version {VERSION}</span></div>
@@ -628,10 +628,10 @@ def st(kind, label):
 def ends(t, root, k):
     return f"""<section class="end" data-section="cta" aria-labelledby="eh">
  <div class="cells" aria-hidden="true"></div>
- <div class="wrap" style="position:relative">
+ <div class="wrap u-rel">
   <h2 id="eh">{esc(k['end_h'])}<br><span class="u">{esc(k['end_u'])}<svg viewBox="0 0 420 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9C90 3 220 2 418 8" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg></span></h2>
   <div class="ctas"><a class="btn go" href="{DL}">{esc(t['dl'])} <span class="ar" aria-hidden="true">&rarr;</span></a><a class="btn ghost" href="{REPO}">{esc(t['gh'])}</a></div>
-  <p class="meta" style="color:var(--soft);font-size:13px;margin-top:18px">{esc(t['meta'])}</p>
+  <p class="meta u-meta">{esc(t['meta'])}</p>
  </div>
 </section>"""
 
@@ -706,12 +706,12 @@ def home(t):
  <div>
   <div class="intro">{sh(k['board_h'], k['board_h2'], id_="bh")}<p>{esc(k['board_p'])}</p></div>
   <div class="ui" role="group" aria-label="{esc(k['board_bar'])}">
-   <div class="bar"><strong>{esc(k['board_bar'])}</strong><a class="q" href="{u['shops']}" style="text-decoration:none"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor"/><path d="m9.5 9.5 3 3" stroke="currentColor"/></svg>{esc(k['board_q'])}</a></div>
+   <div class="bar"><strong>{esc(k['board_bar'])}</strong><a class="q u-nodeco" href="{u['shops']}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor"/><path d="m9.5 9.5 3 3" stroke="currentColor"/></svg>{esc(k['board_q'])}</a></div>
    <table class="mt"><caption class="vh">{esc(k['board_bar'])}</caption>
     <thead><tr>{"".join(f'<th scope="col">{esc(c)}</th>' for c in k['board_cols'])}</tr></thead>
     <tbody>{"".join(trs)}</tbody></table>
   </div>
-  <p style="margin:18px 0 0"><a href="{u['shops']}">{esc(t['shops_more'])}</a></p>
+  <p class="u-mt18"><a href="{u['shops']}">{esc(t['shops_more'])}</a></p>
  </div>
  <div class="thread"><h3>{esc(k['thread_h'])}</h3><p>{esc(k['thread_p'])}</p>{thread}</div>
 </section>
@@ -763,14 +763,14 @@ def home(t):
    </g>
    <path class="draw" d="M190 72h20q30 0 30 30v38M355 160q35 0 35-30V104M465 104v166" fill="none" stroke="var(--soft)"/>
    <path d="M190 302h15q35 0 35-35v-51" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 5"/>
-   <g class="pulse" style="transform-origin:280px 178px"><circle cx="280" cy="178" r="96" fill="none" stroke="var(--line)" stroke-dasharray="2 6"/></g>
+   <g class="pulse u-pulse"><circle cx="280" cy="178" r="96" fill="none" stroke="var(--line)" stroke-dasharray="2 6"/></g>
   </svg>
  </div>
 </section>
 
 <section class="log" data-section="story" aria-labelledby="sth">
  <div><h2 class="sh" id="sth">{esc(k['story_h'])}</h2></div>
- <div class="prose" style="padding-top:100px;padding-bottom:100px;max-width:none"><div style="max-width:620px">{story}</div></div>
+ <div class="prose u-story"><div class="u-w620">{story}</div></div>
 </section>
 
 <section class="log" id="releases" data-section="releases" aria-labelledby="lh">
@@ -799,7 +799,7 @@ def how_page(t):
         if items:
             right = '<ul class="ticks">' + "".join(f'<li><b>{esc(x)}.</b> {esc(y)}</li>' for x, y in items) + '</ul>'
         elif n == 2:
-            right = f'<div style="display:grid;gap:8px"><figure class="proof"><span class="cm"></span><img src="{root}assets/img/hc-spread-1.webp" width="2000" height="707" alt="{"Landscape hardcover spread" if en else "Doppelseite Hardcover quer"}" loading="lazy"><figcaption>{t["ed_caps"][0]}</figcaption></figure><figure class="proof" style="max-width:70%"><span class="cm"></span><img src="{root}assets/img/sc-spread-2.webp" width="1400" height="990" alt="{"Portrait softcover spread with the same photos" if en else "Softcover-Doppelseite hochkant mit denselben Fotos"}" loading="lazy"><figcaption>{t["ed_caps"][1]}</figcaption></figure></div>'
+            right = f'<div class="u-stack"><figure class="proof"><span class="cm"></span><img src="{root}assets/img/hc-spread-1.webp" width="2000" height="707" alt="{"Landscape hardcover spread" if en else "Doppelseite Hardcover quer"}" loading="lazy"><figcaption>{t["ed_caps"][0]}</figcaption></figure><figure class="proof u-w70"><span class="cm"></span><img src="{root}assets/img/sc-spread-2.webp" width="1400" height="990" alt="{"Portrait softcover spread with the same photos" if en else "Softcover-Doppelseite hochkant mit denselben Fotos"}" loading="lazy"><figcaption>{t["ed_caps"][1]}</figcaption></figure></div>'
         elif n == 3:
             right = f'<figure class="ovfig"><img src="{root}assets/img/app-cover.webp" width="2000" height="1250" alt="{"The cover editor with back, spine and front" if en else "Der Umschlag-Editor mit Rückseite, Buchrücken und Vorderseite"}" loading="lazy"></figure>'
         out.append(f'<section class="block"><div class="split"><div><p class="kick">{n + 1:02d} · {esc(a)}</p>{sh(b, "", tag="h2")}<p>{esc(p)}</p></div><div>{right}</div></div></section>')
@@ -820,7 +820,7 @@ def ai_page(t):
     can = '<ul class="ticks">' + "".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in k['ai_can']) + '</ul>'
     out.append(f'<section class="block"><div class="split"><div>{sh(k["ai_can_h"], k["ai_can_h2"])}</div><div>{can}</div></div></section>')
     thread = "".join(f'<p class="msg {w}">{esc(x)}{f"<small>{esc(by)}</small>" if by else ""}</p>' for w, x, by in k['thread'])
-    out.append(f'<section class="board" style="grid-template-columns:1fr 440px"><div><h2 class="sh">{esc(k["thread_h"])}</h2><p style="color:var(--mute);max-width:440px;margin:20px 0 0">{esc(k["thread_p"])}</p><figure class="ovfig" style="margin-top:36px"><img src="{"../" * (2 if t["path"] else 1)}assets/img/k-overview.webp" width="1600" height="771" alt="{esc(k["show_cap"])}" loading="lazy"><figcaption>view_overview · {esc(k["show_cap"])}</figcaption></figure></div><div class="thread">{thread}</div></section>')
+    out.append(f'<section class="board u-board-ai"><div><h2 class="sh">{esc(k["thread_h"])}</h2><p class="u-lead">{esc(k["thread_p"])}</p><figure class="ovfig u-mt36"><img src="{"../" * (2 if t["path"] else 1)}assets/img/k-overview.webp" width="1600" height="771" alt="{esc(k["show_cap"])}" loading="lazy"><figcaption>view_overview · {esc(k["show_cap"])}</figcaption></figure></div><div class="thread">{thread}</div></section>')
     cfg = esc('{\n  "mcpServers": {\n    "billerbook": {\n      "command": "/Applications/Billerbook.app/Contents/MacOS/Billerbook",\n      "args": ["/Applications/Billerbook.app/Contents/Resources/app/mcp.mjs"],\n      "env": { "ELECTRON_RUN_AS_NODE": "1" }\n    }\n  }\n}')
     out.append(f'<section class="block"><div class="split"><div><h2 class="sh">{esc(k["ai_local_h"])}</h2><p>{esc(k["ai_local_p"])}</p></div><div><pre class="code">{cfg}</pre></div></div></section>')
     rl = '<ul class="ticks">' + "".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in k['ai_remote_list']) + '</ul>'
@@ -871,7 +871,7 @@ def showcase_page2(t):
  <div class="wrap">
   <div><p class="kick">{esc(t['sc_eyebrow'])}</p><h1 id="h">{t['sc_h1'].replace("<span class='hl'>", "<em>").replace("</span>", "</em>")}</h1><p class="lede">{esc(t['sc_lead'])}</p>
    <div class="ctas"><a class="btn go" href="{DL}">{esc(t['sc_cta'])} <span class="ar" aria-hidden="true">&rarr;</span></a><a class="btn ghost" href="#book">{esc(t['sc_book_h'])}</a></div></div>
-  <div class="stage"><span class="ring" aria-hidden="true"></span><figure class="proof" style="width:min(520px,100%)"><span class="cm"></span><img src="{root}assets/img/bs-cover.webp" width="1200" height="854" alt="{"Botanical Stories, cover" if en else "Botanical Stories, Umschlag"}"><figcaption>Hardcover · 297 × 210 mm · WIRmachenDRUCK</figcaption></figure></div>
+  <div class="stage"><span class="ring" aria-hidden="true"></span><figure class="proof u-w520"><span class="cm"></span><img src="{root}assets/img/bs-cover.webp" width="1200" height="854" alt="{"Botanical Stories, cover" if en else "Botanical Stories, Umschlag"}"><figcaption>Hardcover · 297 × 210 mm · WIRmachenDRUCK</figcaption></figure></div>
  </div>
 </section>
 <section class="field" id="book" aria-labelledby="bk"><div class="wrap">
@@ -881,10 +881,10 @@ def showcase_page2(t):
 <section class="block" aria-labelledby="mk"><div class="split"><div><h2 class="sh acc" id="mk">{esc(t['sc_how_h'])}</h2></div>
  <div><ul class="ticks">{"".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in t['sc_how'])}</ul></div></div></section>
 <section class="block" aria-labelledby="sp">{sh(t['sc_spreads_h'], "", id_="sp")}
- <div style="display:grid;gap:12px;margin-top:36px">{"".join(f'<figure class="proof"><span class="cm"></span><img src="{root}assets/img/{f}" width="2400" height="848" alt="{esc(a_en if en else a_de)}" loading="lazy"><figcaption>{esc(a_en if en else a_de)}</figcaption></figure>' for f, a_en, a_de in SPREADS)}</div>
+ <div class="u-stack u-mt36">{"".join(f'<figure class="proof"><span class="cm"></span><img src="{root}assets/img/{f}" width="2400" height="848" alt="{esc(a_en if en else a_de)}" loading="lazy"><figcaption>{esc(a_en if en else a_de)}</figcaption></figure>' for f, a_en, a_de in SPREADS)}</div>
 </section>
 <section class="block" aria-labelledby="gl">{sh(t['sc_galleries'], "", id_="gl")}
- <ul class="gal" style="margin-top:28px">{"".join(f'<li><a href="https://www.tillheidrich.de/gallery/{g}/">{esc(n)}</a></li>' for n, g in GALLERIES)}</ul>
+ <ul class="gal u-mt28">{"".join(f'<li><a href="https://www.tillheidrich.de/gallery/{g}/">{esc(n)}</a></li>' for n, g in GALLERIES)}</ul>
 </section>
 {ends(t, root, k)}
 </main>""")
