@@ -376,7 +376,7 @@ kbd{font:500 12px/1 var(--font);border:1px solid var(--line);border-bottom-width
 .stage .toast{top:42px;bottom:auto;right:-30px}
 .bay img{object-position:70% 50%}
 .feed{bottom:auto}
-.stage .toast.b{top:auto;right:auto;bottom:-24px;left:-40px}
+.stage .toast.b{top:auto;right:auto;bottom:-58px;left:-40px}
 
 /* keyboard grid */
 .keys-grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin-top:44px}
