@@ -1,0 +1,10 @@
+<!-- Billerbook: embed the book folder as /book/ on your site, then use one of these. -->
+
+<!-- 1. iframe (any site, also Astro): -->
+<iframe src="/book/index.html" title="Botanical Stories – Hardcover" loading="lazy" style="width:100%;aspect-ratio:1.4151;border:0" allowfullscreen></iframe>
+
+<!-- 2. Astro component, e.g. src/components/Book.astro (put the folder into public/book/): -->
+---
+const book = await fetch(new URL('/book/book.json', Astro.url)).then((r) => r.json()).catch(() => null);
+---
+<iframe src="/book/index.html" title={book?.title ?? 'Photo book'} loading="lazy" style={`width:100%;aspect-ratio:1.4151;border:0`} allowfullscreen></iframe>

@@ -6,7 +6,7 @@ import os, sys, html, shutil
 
 REPO = "https://github.com/tillheidrich/billerbook"
 DL = REPO + "/releases/latest"
-VERSION = "0.10"
+VERSION = "0.11"
 BASE = "https://billerbook.heidrich-digital.de/"
 
 ARROW = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>'
@@ -33,8 +33,8 @@ T = {
   cards=[
    ("w7", "Crop without the fiddling", "Drag inside a frame to move the photo, scroll to zoom. F toggles between filling the frame and showing the whole photo. V makes it a full-bleed page. Billerbook finds the subject of each photo, so automatic crops keep faces and horizons in view.", "app-editor.webp", None),
    ("w5", "Keyboard first", "Space cycles through arrangements of the photos already on the page. Number keys pick a layout with that many photos. Cmd+D duplicates a page.", None, "keys"),
-   ("w5", "Ask your AI to build the book", "Billerbook includes an MCP server with 35 tools. Claude or another assistant can read a folder, choose the print shop and paper, lay out the book, render each spread as an image and change the ones that don't work. You check the result in the app.", None, "prompt"),
-   ("w7", "Your print shop, its rules", "Pick Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital, PrestoPhoto or WIRmachenDRUCK, then format and paper. The spine width follows from page count and paper, using the printer's own formula or table. For printers that only give it in their calculator, import their cover template and Billerbook reads the exact cover size from it. The interior comes as single pages or as spreads.", "app-printsettings.webp", None),
+   ("w5", "Ask your AI to build the book", "Billerbook includes an MCP server with 48 tools for Claude, ChatGPT, Codex or Cursor. Connect ChatGPT or claude.ai with a six-digit code from the app. The assistant reads a folder, a web page or your print shop's data sheet, sets up the print profile, lays out the book, looks at every spread as an image and fixes the ones that don't work. You check the result in the app.", None, "prompt"),
+   ("w7", "Your print shop, its rules", "208 formats from Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital, CEWE, WhiteWall, PrestoPhoto and WIRmachenDRUCK, plus standard photo book, book and magazine sizes and a special size for every binding. The spine width follows from page count and paper, using the printer's own formula or table. Hand your assistant the print shop's data sheet PDF and it sets up trim, bleed, cover and page rules from it. Magazines come with saddle stitching and a separate four-page cover if the printer wants one.", "app-printsettings.webp", None),
    ("w6", "In the book, and visible in Lightroom", "Billerbook reads your Lightroom Classic catalog and never writes to it. The optional plug-in keeps a collection per edition in Lightroom, plus one with the photos that are still missing. Books from Lightroom's Book module import with their pages.", "app-overview.webp", None),
    ("w6", "Everything the Book module does", "Duplicate pages, copy a layout to the next page or to every page with the same number of photos, save your own layouts, set a background photo with opacity, change margin and gap on one page, hide a page number.", "app-pagetools.webp", None),
    ("w6", "Cover with a real spine", "The cover is sized from page count and paper, including spine width, turn-in and hinge. Billerbook sets the title and spine text, and you can change both. Preflight warns about low resolution, the glue zone, page limits and an estimated spine before you pay.", "app-cover.webp", None),
@@ -51,12 +51,12 @@ T = {
          ("Pick a format", "Choose a print profile and a size. Bleed, safety margin and glue zone come with it."),
          ("Lay out", "Auto-fill makes a first draft. Then you change spreads with the keyboard or by dragging photos."),
          ("Export", "Interior and cover as separate PDFs, RGB or CMYK with an ICC profile, ready to upload.")],
-  pr_eyebrow="Print shops", pr_h="Eight print shops built in. <span class='hl'>Any other</span> in two minutes.",
+  pr_eyebrow="Print shops", pr_h="Ten print shops and 208 formats built in. <span class='hl'>Any other</span> from its data sheet.",
   pr_lead="Billerbook writes standard print PDFs with trim and bleed boxes, embedded output intent and images at full resolution. A print profile holds what differs between shops. For a shop that is not listed, import its cover template or enter its numbers once and export them as a profile.",
   spec=[("Bleed", "3 mm"), ("Safety margin", "5 mm"), ("Glue zone, hardcover", "7 mm"), ("Cover", "spine from page count"), ("Colour", "RGB or CMYK + ICC"), ("Profiles", "WIRmachenDRUCK, custom")],
   spec_note="The values above come from the WIRmachenDRUCK profile, checked against the shop's data sheets and real printed books. The custom profile lets you set every number for another shop.",
   shops_label="Built-in print profiles", shops_slug="print-shops", shops_more="Specs, sources and formats for every print shop →",
-  shops_title="Print shops supported by Billerbook: Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital and more",
+  shops_title="Print shops and formats in Billerbook: Blurb, Amazon KDP, Lulu, IngramSpark, CEWE, WhiteWall, Saal Digital, Mixam and more",
   shops_desc="Bleed, page rules, spine width and cover measurements Billerbook uses for each print shop, with links to the printers' own specifications.",
   shops_h1="Print shops", shops_intro="Billerbook writes standard print PDFs, so any print shop that accepts PDF uploads can print your book. These profiles are built in. Every number comes from the printer's own published specification; the links are below each profile. Where a printer gives the cover size only through its own calculator, you import the cover template it generates and Billerbook takes the exact size from it.",
   status_names={"verified": "verified", "partial": "partly verified, cover via template", "manual": "your values"},
@@ -68,13 +68,29 @@ T = {
   faq=[("Is it really free?", "Yes. Billerbook is open source under the AGPL-3.0 licence. There is no paid tier, no account and no trial."),
        ("Does it work with Blurb?", "Yes, through Blurb's PDF to Book upload. Billerbook knows Blurb's photo book sizes, the single-page interior with 1/8 in bleed and the page limits per paper. Blurb gives the exact cover size only in its specification calculator, so you download Blurb's cover template there and import it."),
        ("Can I print a photo book with Amazon KDP or Lulu?", "Yes. For KDP and Lulu paperbacks Billerbook uses the spine formulas the two publish, so the cover is exact without a template. For hardcovers it uses Lulu's spine table or the cover template from the printer."),
-       ("Which other print shops work?", "Any shop that takes print PDFs. Built in are also WIRmachenDRUCK, Saal Digital, Mixam, IngramSpark and PrestoPhoto. For others you import the shop's cover template, or enter bleed, margins and cover numbers once and export them as a profile."),
+       ("Which other print shops work?", "Any shop that takes print PDFs. Built in are also WIRmachenDRUCK, Saal Digital, CEWE (PDF to Book), WhiteWall, Mixam, IngramSpark and PrestoPhoto, 208 formats in all, and every binding has a special size with free width and height. For other shops you give your AI assistant the shop's data sheet PDF, or enter bleed, margins and cover numbers once and export them as a profile."),
+       ("Can I make a magazine or a booklet?", "Yes. Saddle stitching is a binding of its own: pages in steps of four, A4, A5, 23 × 30 cm, US Letter and other sizes. The cover is either the first and last pages of the interior or a separate four-page PDF (U1 to U4) for a heavier cover paper."),
+       ("Can ChatGPT or Claude build the book for me?", "Yes. Claude Desktop, Codex and Cursor connect locally. ChatGPT and claude.ai connect over OAuth: Billerbook opens a tunnel, you add the address as a connector and approve it with a six-digit code from the app. Remote assistants work only on your photo book projects; they get no access to other files on your Mac."),
+       ("Can I put the book on my website?", "Yes. Export it as an interactive HTML book that pages with arrow keys and swipes and keeps the text readable for search engines, with a snippet for Astro or any other site. EPUB, Instagram carousels, page images and a small screen PDF are also there."),
        ("How does Billerbook know the spine width?", "From the printer: its formula or table for the paper and page count where it publishes one, otherwise from the cover template you download from the printer, or the value you enter. Until then Billerbook shows an estimate, marks it as one and warns before export."),
        ("Can I see in Lightroom which photos are in the book?", "Yes, with the Lightroom Classic plug-in. It keeps a collection per edition under Billerbook in the Collections panel, and a second one with the photos from your Lightroom selection that are not in that edition yet."),
        ("Does it run on Windows or Linux?", "The download is a Mac app. The editor itself is a local web app written in Node.js, so it also runs on Windows and Linux from source. Instructions are in the README."),
        ("Do I need Lightroom?", "No. A folder of JPEGs is enough. Lightroom Classic support is there for people who already select their photos there."),
        ("Do my photos leave my computer?", "No. Everything runs locally. The app only goes online to check for updates."),
        ("How do updates work?", "The Mac app checks GitHub releases and installs new versions after you confirm.")],
+  sc_slug="botanical-stories", sc_nav="Example book",
+  sc_title="Botanical Stories: a 170-page photo book made with Billerbook from 22 garden visits",
+  sc_desc="Glasshouses and botanical gardens from Greifswald to Tenerife, laid out as a monograph in Billerbook: imported from the galleries on tillheidrich.de, botanical template, ready for print. Page through the interactive book.",
+  sc_eyebrow="Made with Billerbook", sc_h1="Botanical <span class='hl'>Stories</span>",
+  sc_lead="Glasshouses and gardens, 2019 to 2024: Greifswald, Amsterdam, Leiden, Copenhagen, Aarhus, Utrecht, Hanover, Hamburg, Gran Canaria, Tenerife. 118 photos, 22 chapters, 170 pages in A4 landscape.",
+  sc_book_h="Page through the book", sc_book_note="Arrow keys or swipe. The interactive book is Billerbook's HTML export, embedded as it comes out of the app.",
+  sc_how_h="How it was made",
+  sc_how=[("22 web pages in, one book out", "Each garden is a gallery on tillheidrich.de. The web import read every gallery page, took eight photos evenly spread over each, and turned the title into a chapter page and the text into a text page."),
+          ("A template, then a rhythm", "The botanical template set warm paper, Cormorant Garamond and plates in the classic canon margins. Each chapter opens on a right page, starts with a full-bleed spread and alternates plates, small photos with white, and diptychs, the way monographs by photographers are paced."),
+          ("Checked before print", "Preflight flags every photo that is too small for print. The web galleries hold screen-size JPEGs, so the print edition takes the originals from Lightroom; the web and social versions use what you see here."),
+          ("Out in every format", "From the same project: print PDFs with a cover in PDF/X-4, the interactive HTML book on this page, an Instagram carousel, a screen PDF and the double-page images used across this site.")],
+  sc_spreads_h="Some spreads", sc_galleries="The galleries on tillheidrich.de",
+  sc_cta="Make your own book",
   final_h="Download Billerbook and open a folder of photos.",
   foot_by='Made by <a href="https://tillheidrich.de">Till Heidrich</a> in Tostedt, Germany.',
   imprint="Imprint", privacy="Privacy", source="Source code",
@@ -99,8 +115,8 @@ T = {
   cards=[
    ("w7", "Zuschneiden ohne Gefummel", "Im Rahmen ziehen verschiebt das Foto, Scrollen zoomt. F wechselt zwischen randfüllend und ganzem Foto. V macht daraus eine randlose Seite. Billerbook erkennt das Motiv jedes Fotos, damit automatische Ausschnitte Gesichter und Horizonte im Bild behalten.", "app-editor.webp", None),
    ("w5", "Tastatur zuerst", "Die Leertaste blättert durch Anordnungen der Fotos auf der Seite. Zifferntasten wählen ein Layout mit so vielen Fotos. Cmd+D dupliziert eine Seite.", None, "keys"),
-   ("w5", "Lass deine KI das Buch bauen", "Billerbook bringt einen MCP-Server mit 35 Werkzeugen mit. Claude oder ein anderer Assistent liest einen Ordner, wählt Druckerei und Papier, legt das Buch an, rendert jede Doppelseite als Bild und ändert die, die nicht funktionieren. Du prüfst das Ergebnis in der App.", None, "prompt"),
-   ("w7", "Deine Druckerei, ihre Regeln", "Wähle WIRmachenDRUCK, Saal Digital, Blurb, Amazon KDP, Lulu, IngramSpark, Mixam oder PrestoPhoto, dann Format und Papier. Die Rückenbreite folgt aus Seitenzahl und Papier, nach Formel oder Tabelle der Druckerei. Nennt die Druckerei sie nur im eigenen Rechner, importierst du ihre Umschlagvorlage und Billerbook liest das genaue Maß daraus. Den Inhalt gibt es als Einzel- oder Doppelseiten.", "app-printsettings.webp", None),
+   ("w5", "Lass deine KI das Buch bauen", "Billerbook bringt einen MCP-Server mit 48 Werkzeugen für Claude, ChatGPT, Codex oder Cursor mit. ChatGPT und claude.ai verbindest du mit einem sechsstelligen Code aus der App. Der Assistent liest einen Ordner, eine Webseite oder das Datenblatt deiner Druckerei, richtet das Druckprofil ein, legt das Buch an, sieht sich jede Doppelseite als Bild an und ändert die, die nicht funktionieren. Du prüfst das Ergebnis in der App.", None, "prompt"),
+   ("w7", "Deine Druckerei, ihre Regeln", "208 Formate von WIRmachenDRUCK, Saal Digital, CEWE, WhiteWall, Blurb, Amazon KDP, Lulu, IngramSpark, Mixam und PrestoPhoto, dazu gängige Fotobuch-, Buch- und Magazinformate und ein Sonderformat für jede Bindung. Die Rückenbreite folgt aus Seitenzahl und Papier, nach Formel oder Tabelle der Druckerei. Gib deinem Assistenten das Datenblatt der Druckerei als PDF, dann richtet er Endformat, Beschnitt, Umschlag und Seitenregeln danach ein. Magazine gibt es mit Rückendrahtheftung und auf Wunsch mit separatem vierseitigem Umschlag.", "app-printsettings.webp", None),
    ("w6", "Im Buch, und in Lightroom sichtbar", "Billerbook liest deinen Lightroom-Classic-Katalog und schreibt nie hinein. Das Plug-in legt in Lightroom eine Sammlung je Edition an, dazu eine mit den Fotos, die noch fehlen. Bücher aus dem Lightroom-Buch-Modul kommen samt Seiten mit.", "app-overview.webp", None),
    ("w6", "Alles, was das Buch-Modul kann", "Seiten duplizieren, ein Layout auf die nächste Seite oder alle Seiten mit gleich vielen Fotos übertragen, eigene Layouts speichern, Hintergrundfoto mit Deckkraft, Rand und Abstand je Seite, Seitenzahl ausblenden.", "app-pagetools.webp", None),
    ("w6", "Umschlag mit echtem Buchrücken", "Der Umschlag wird aus Seitenzahl und Papier berechnet, mit Rückenbreite, Einschlag und Falz. Billerbook setzt Titel und Rückentext, du kannst beides ändern. Die Prüfung meldet zu geringe Auflösung, die Klebezone, Seitengrenzen und einen geschätzten Rücken, bevor du bezahlst.", "app-cover.webp", None),
@@ -117,12 +133,12 @@ T = {
          ("Format wählen", "Druckprofil und Größe aussuchen. Beschnitt, Sicherheitsabstand und Klebezone kommen mit."),
          ("Gestalten", "Automatisch füllen macht einen ersten Entwurf. Danach änderst du Doppelseiten mit der Tastatur oder durch Ziehen."),
          ("Exportieren", "Inhalt und Umschlag als getrennte PDFs, RGB oder CMYK mit ICC-Profil, fertig zum Hochladen.")],
-  pr_eyebrow="Druckereien", pr_h="Acht Druckereien eingebaut. <span class='hl'>Jede andere</span> in zwei Minuten.",
+  pr_eyebrow="Druckereien", pr_h="Zehn Druckereien und 208 Formate eingebaut. <span class='hl'>Jede andere</span> über ihr Datenblatt.",
   pr_lead="Billerbook schreibt normale Druck-PDFs mit Endformat- und Beschnittrahmen, eingebettetem Ausgabeprofil und Bildern in voller Auflösung. Was sich zwischen Druckereien unterscheidet, steht im Druckprofil. Für eine Druckerei, die fehlt, importierst du ihre Umschlagvorlage oder trägst ihre Werte einmal ein und exportierst sie als Profil.",
   spec=[("Beschnitt", "3 mm"), ("Sicherheitsabstand", "5 mm"), ("Klebezone Hardcover", "7 mm"), ("Umschlag", "Rücken aus Seitenzahl"), ("Farbe", "RGB oder CMYK + ICC"), ("Profile", "WIRmachenDRUCK, frei")],
   spec_note="Die Werte oben stammen aus dem Profil für WIRmachenDRUCK, abgeglichen mit den Datenblättern der Druckerei und echten gedruckten Büchern. Im freien Profil stellst du jeden Wert für eine andere Druckerei ein.",
   shops_label="Eingebaute Druckprofile", shops_slug="druckereien", shops_more="Daten, Quellen und Formate jeder Druckerei →",
-  shops_title="Druckereien in Billerbook: WIRmachenDRUCK, Saal Digital, Blurb, Amazon KDP, Lulu, Mixam und mehr",
+  shops_title="Druckereien und Formate in Billerbook: WIRmachenDRUCK, Saal Digital, CEWE, WhiteWall, Blurb, Amazon KDP, Lulu, Mixam und mehr",
   shops_desc="Beschnitt, Seitenregeln, Rückenbreite und Umschlagmaße, die Billerbook je Druckerei nutzt, mit Links zu den Datenblättern der Druckereien.",
   shops_h1="Druckereien", shops_intro="Billerbook schreibt normale Druck-PDFs, also kann jede Druckerei mit PDF-Upload dein Buch drucken. Diese Profile sind eingebaut. Jede Zahl stammt aus den veröffentlichten Angaben der Druckerei; die Links stehen unter jedem Profil. Nennt eine Druckerei das Umschlagmaß nur in ihrem eigenen Rechner, importierst du die Vorlage, die er erzeugt, und Billerbook übernimmt das genaue Maß.",
   status_names={"verified": "geprüft", "partial": "teilweise geprüft, Umschlag über Vorlage", "manual": "eigene Werte"},
@@ -134,12 +150,29 @@ T = {
   faq=[("Ist das wirklich kostenlos?", "Ja. Billerbook ist Open Source unter der AGPL-3.0. Es gibt keine Bezahlversion, kein Konto und keine Testphase."),
        ("Funktioniert es mit WIRmachenDRUCK und Saal Digital?", "Ja. Das Profil für WIRmachenDRUCK ist mit den Datenblättern und gedruckten Büchern abgeglichen. Für Saal Digital exportiert Billerbook den Inhalt als Doppelseiten mit leerer erster und letzter Seite, wie Saal es verlangt. Das Umschlagmaß liest Billerbook aus Saals Vorlage."),
        ("Geht auch Blurb, Amazon KDP oder Lulu?", "Ja. Für KDP- und Lulu-Paperbacks nutzt Billerbook die veröffentlichten Rückenformeln, der Umschlag stimmt ohne Vorlage. Für Blurb und für Hardcover lädst du die Umschlagvorlage der Druckerei herunter und importierst sie."),
+       ("Welche Formate gibt es?", "208 Formate in zwölf Profilen: Fotobücher von 15 × 15 bis 40 × 30 cm, Buchformate wie 12 × 19, 13,5 × 21,5, A5, 17 × 24 und B5, US-Formate wie 6 × 9 Zoll und Magazine in A4, A5, 23 × 30 cm und US Letter. Jede Druckerei und jede Bindung hat zusätzlich ein Sonderformat mit freier Breite und Höhe."),
+       ("Kann ich ein Magazin oder eine Broschüre machen?", "Ja. Rückendrahtheftung ist eine eigene Bindung: Seiten in Viererschritten, Formate wie A4, A5, 23 × 30 cm und US Letter. Der Umschlag ist entweder Teil des Innenteils oder eine eigene PDF mit vier Seiten (U1 bis U4) für festeres Umschlagpapier."),
+       ("Kann ChatGPT oder Claude das Buch für mich bauen?", "Ja. Claude Desktop, Codex und Cursor verbinden sich lokal. ChatGPT und claude.ai verbinden sich über OAuth: Billerbook öffnet einen Tunnel, du trägst die Adresse als Connector ein und gibst ihn mit einem sechsstelligen Code aus der App frei. Entfernte Assistenten arbeiten nur an deinen Fotobuch-Projekten und kommen an keine anderen Dateien auf deinem Mac. Gibst du ihnen das Datenblatt deiner Druckerei, richten sie das Buch danach ein."),
+       ("Kann ich das Buch auf meine Website stellen?", "Ja, als interaktives HTML-Buch zum Blättern mit Pfeiltasten und Wischen, mit lesbarem Text für Suchmaschinen und einem Schnipsel für Astro oder jede andere Seite. Dazu gibt es EPUB, Instagram-Karussells, Seitenbilder und ein kleines Bildschirm-PDF."),
        ("Woher kennt Billerbook die Rückenbreite?", "Von der Druckerei: aus ihrer Formel oder Tabelle für Papier und Seitenzahl, wo sie eine veröffentlicht, sonst aus ihrer Umschlagvorlage oder aus dem Wert, den du einträgst. Bis dahin zeigt Billerbook eine Schätzung, kennzeichnet sie und warnt vor dem Export."),
        ("Sehe ich in Lightroom, welche Fotos im Buch sind?", "Ja, mit dem Plug-in für Lightroom Classic. Es pflegt im Bedienfeld Sammlungen unter Billerbook eine Sammlung je Edition und eine zweite mit den Fotos deiner Lightroom-Auswahl, die in dieser Edition noch fehlen."),
        ("Läuft es unter Windows oder Linux?", "Zum Download gibt es eine Mac-App. Der Editor selbst ist eine lokale Web-App in Node.js und läuft aus dem Quellcode auch unter Windows und Linux. Die Anleitung steht im README."),
        ("Brauche ich Lightroom?", "Nein. Ein Ordner mit JPEGs reicht. Die Lightroom-Classic-Anbindung ist für alle, die ihre Fotos ohnehin dort auswählen."),
        ("Verlassen meine Fotos den Rechner?", "Nein. Alles läuft lokal. Online geht die App nur, um nach Updates zu sehen."),
        ("Wie kommen Updates?", "Die Mac-App prüft die GitHub-Releases und installiert neue Versionen, wenn du zustimmst.")],
+  sc_slug="botanical-stories", sc_nav="Beispielbuch",
+  sc_title="Botanical Stories: ein Bildband mit 170 Seiten aus 22 Gartenbesuchen, gemacht mit Billerbook",
+  sc_desc="Gewächshäuser und botanische Gärten von Greifswald bis Teneriffa, als Bildband in Billerbook gestaltet: aus den Galerien auf tillheidrich.de importiert, Vorlage Botanik, druckfertig. Blättere durch das interaktive Buch.",
+  sc_eyebrow="Gemacht mit Billerbook", sc_h1="Botanical <span class='hl'>Stories</span>",
+  sc_lead="Gewächshäuser und Gärten von 2019 bis 2024: Greifswald, Amsterdam, Leiden, Kopenhagen, Aarhus, Utrecht, Hannover, Hamburg, Gran Canaria, Teneriffa. 118 Fotos, 22 Kapitel, 170 Seiten A4 quer.",
+  sc_book_h="Durch das Buch blättern", sc_book_note="Pfeiltasten oder wischen. Das interaktive Buch ist Billerbooks HTML-Export, so eingebunden, wie er aus der App kommt.",
+  sc_how_h="So ist es entstanden",
+  sc_how=[("22 Webseiten rein, ein Buch raus", "Jeder Garten ist eine Galerie auf tillheidrich.de. Der Web-Import hat jede Galerieseite gelesen, je acht gleichmäßig verteilte Fotos genommen und aus dem Titel eine Kapitelseite und aus dem Text eine Textseite gemacht."),
+          ("Eine Vorlage, dann ein Rhythmus", "Die Vorlage Botanik setzt warmes Papier, Cormorant Garamond und Tafeln im klassischen Satzspiegel. Jedes Kapitel beginnt auf einer rechten Seite mit einer randlosen Doppelseite und wechselt dann zwischen Tafeln, kleinen Fotos mit viel Weiß und Diptychen, so wie Fotografen ihre Bildbände takten."),
+          ("Vor dem Druck geprüft", "Die Prüfung markiert jedes Foto, das für den Druck zu klein ist. Die Webgalerien enthalten Bildschirm-JPEGs, also nimmt die Druckausgabe die Originale aus Lightroom; Web und Social Media nutzen das, was du hier siehst."),
+          ("Raus in jedem Format", "Aus demselben Projekt: Druck-PDFs mit Umschlag in PDF/X-4, das interaktive HTML-Buch auf dieser Seite, ein Instagram-Karussell, ein Bildschirm-PDF und die Doppelseiten, die auf dieser Website zu sehen sind.")],
+  sc_spreads_h="Einige Doppelseiten", sc_galleries="Die Galerien auf tillheidrich.de",
+  sc_cta="Mach dein eigenes Buch",
   final_h="Billerbook laden und einen Fotoordner öffnen.",
   foot_by='Gebaut von <a href="https://tillheidrich.de">Till Heidrich</a> in Tostedt.',
   imprint="Impressum", privacy="Datenschutz", source="Quellcode",
@@ -156,7 +189,8 @@ def L(o, lang):
 
 def shop_spine(b):
     if b.get('papers'):
-        return b['papers'][0]['spine']
+        sp = b['papers'][0]['spine']
+        return sp.get('type', 'printer') if isinstance(sp, dict) else sp
     return (b.get('spine') or {}).get('type', 'printer')
 
 def shop_rows(t):
@@ -170,6 +204,8 @@ def shop_rows(t):
 
 def mm(v):
     return f"{v:g} mm"
+
+BIND = {'en': {'hardcover': 'Hardcover', 'softcover': 'Softcover / paperback', 'layflat': 'Layflat', 'saddle': 'Saddle stitch (magazine)'}, 'de': {'hardcover': 'Hardcover', 'softcover': 'Softcover', 'layflat': 'Layflat', 'saddle': 'Rückendrahtheftung (Magazin)'}}
 
 def shops_page(t):
     root = "../../" if t["path"] else "../"
@@ -197,7 +233,7 @@ def shops_page(t):
             if papers: rows.append((t['lbl_papers'], papers))
             fm = ', '.join(L(f['label'], lang) for f in sh['formats'] if f['binding'] == k)
             rows.append((t['lbl_formats'], fm))
-            out.append(f'<h3>{esc(k.capitalize())} <span class="tag">{esc(t["status_names"].get(b["status"], b["status"]))}</span></h3><table class="spec"><tbody>' + ''.join(f'<tr><td>{esc(a)}</td><td>{esc(v)}</td></tr>' for a, v in rows) + '</tbody></table>')
+            out.append(f'<h3>{esc(BIND[t["lang"]].get(k, k.capitalize()))} <span class="tag">{esc(t["status_names"].get(b["status"], b["status"]))}</span></h3><table class="spec"><tbody>' + ''.join(f'<tr><td>{esc(a)}</td><td>{esc(v)}</td></tr>' for a, v in rows) + '</tbody></table>')
         src = ' '.join(f'<a href="{esc(u)}" rel="nofollow noopener">[{i+1}]</a>' for i, u in enumerate(sh['sources']))
         out.append(f'<p class="note">{esc(t["lbl_sources"])}: {src} · {esc(t["lbl_checked"])} {esc(sh.get("checked", ""))}</p></section>')
     out.append(f'<p class="lead">{esc(t["lbl_any"])}</p></main>')
@@ -228,7 +264,7 @@ def shops_ld(t, url):
         "about": [sh['name'] for sh in SHOPS], "author": {"@type": "Person", "name": "Till Heidrich"}, "dateModified": SHOPS[0].get('checked'),
     }]
 
-def head(t, title, desc, canonical, alt_en, alt_de, root, ld=None):
+def head(t, title, desc, canonical, alt_en, alt_de, root, ld=None, og="og.jpg"):
     return f"""<!doctype html>
 <html lang="{t['lang']}">
 <head>
@@ -243,7 +279,7 @@ def head(t, title, desc, canonical, alt_en, alt_de, root, ld=None):
 <meta name="theme-color" content="#f5f0e6">
 <meta property="og:title" content="{esc(title)}">
 <meta property="og:description" content="{esc(desc)}">
-<meta property="og:image" content="{BASE}assets/img/og.jpg">
+<meta property="og:image" content="{BASE}assets/img/{og}">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="{root}assets/img/favicon.png">
@@ -282,6 +318,76 @@ def img(root, name, alt, w, h, lazy=True):
 def proof(inner, cap="", cls=""):
     c = f'<figcaption>{cap}</figcaption>' if cap else ""
     return f'<figure class="proof m0 {cls}"><span class="cm"></span>{inner}{c}</figure>'
+
+GALLERIES = [
+    ("Botanischer Garten der Uni Greifswald", "botanischer-garten-der-uni-greifswald"), ("Hortus Botanicus Amsterdam", "hortus-botanicus-amsterdam-august-2020"),
+    ("Hortus botanicus Leiden", "botanischer-garten-universitaet-leiden"), ("Jardín de la Marquesa, Gran Canaria", "gran-canaria-jardin-de-la-marquesa-2021"),
+    ("Botanisk Have, Kopenhagen", "botanisk-have-kopenhagen"), ("Jardín Botánico, Puerto de la Cruz", "botanischer-garten-auf-teneriffa-puerto-de-la-cruz"),
+    ("Berggarten Hannover", "hannover-berggarten-17-juni-2023"), ("Tropenhaus Walsrode", "tropenhaus-im-vogelpark-walsrode"),
+    ("Planten un Blomen, Hamburg", "tropenhaus-der-universitaet-hamburg-planten-un-blomen"), ("Botanischer Garten Utrecht", "botanischer-garten-der-universitaet-utrecht-oktober-2023"),
+    ("Botanisk Have, Aarhus", "botanischer-garten-botanisk-have-in-aarhus"), ("Gärtnerei Bernstorff, Aarhus", "gaertnerei-bernstorff-den-gamle-by-aarhus"),
+    ("Randers Regnskov", "randers-regnskov-tropical-zoo"),
+]
+SPREADS = [("bs-hero.webp", "Greifswald Botanic Garden, full-bleed opening spread", "Botanischer Garten Greifswald, randlose Auftaktdoppelseite"),
+           ("bs-ferns.webp", "Two plates: greenhouse and ferns", "Zwei Tafeln: Gewächshaus und Farne"),
+           ("bs-bw.webp", "Greifswald on film, black and white", "Greifswald auf Film, schwarzweiß"),
+           ("bs-diptych.webp", "Diptych of palm leaves on film", "Diptychon mit Palmblättern auf Film"),
+           ("bs-gate.webp", "Jardín Botánico, Puerto de la Cruz", "Jardín Botánico, Puerto de la Cruz"),
+           ("bs-calathea.webp", "Calathea leaves and a palm house path", "Calathea-Blätter und ein Weg im Palmenhaus"),
+           ("bs-bernstorff.webp", "Gärtnerei Bernstorff, Den Gamle By, Aarhus", "Gärtnerei Bernstorff, Den Gamle By, Aarhus")]
+
+def showcase_ld(t, url):
+    return [{
+        "@context": "https://schema.org", "@type": "Book", "name": "Botanical Stories", "inLanguage": "en",
+        "author": {"@type": "Person", "name": "Till Heidrich", "url": "https://tillheidrich.de"},
+        "numberOfPages": 170, "bookFormat": "https://schema.org/Hardcover", "image": BASE + "assets/img/bs-cover.webp",
+        "description": t['sc_lead'], "url": url,
+        "creativeWorkStatus": "Example made with Billerbook",
+        "isBasedOn": [f"https://www.tillheidrich.de/gallery/{g}/" for _, g in GALLERIES],
+    }, {
+        "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Billerbook", "item": BASE + t['path']},
+            {"@type": "ListItem", "position": 2, "name": "Botanical Stories", "item": url}]
+    }]
+
+def showcase_page(t):
+    root = "../../" if t["path"] else "../"
+    en = t["lang"] == "en"
+    url = BASE + t['path'] + t['sc_slug'] + '/'
+    out = [head(t, t['sc_title'], t['sc_desc'], url, BASE + 'botanical-stories/', BASE + 'de/botanical-stories/', root, ld=showcase_ld(t, url), og="bs-og.jpg"), nav(t, root, '../')]
+    book = f"{root}books/botanical-stories/index.html"
+    out.append(f"""<main>
+<section class="hero sc-hero"><div class="wrap">
+<div class="top">
+<div><p class="label red rv">{t['sc_eyebrow']}</p><h1 class="rv d1 h1">{t['sc_h1']}</h1></div>
+<div class="side"><p class="lead rv d2">{esc(t['sc_lead'])}</p>
+<div class="ctas rv d2"><a class="btn btn-red" href="{DL}">{esc(t['sc_cta'])}{DOWN}</a></div></div>
+</div>
+<div class="shot">{proof(img(root, "bs-cover.webp", "Botanical Stories, cover" if en else "Botanical Stories, Umschlag", 1200, 854, lazy=False), "Hardcover · 297 × 210 mm", "rv d2 sc-cover")}</div>
+</div></section>
+<section class="dark" id="book"><div class="wrap">
+<div class="head"><div><h2 class="rv">{esc(t['sc_book_h'])}</h2></div><p class="lead rv d1">{esc(t['sc_book_note'])}</p></div>
+<div class="bookframe rv d1"><iframe src="{book}" title="Botanical Stories" loading="lazy" allow="fullscreen" allowfullscreen></iframe></div>
+</div></section>
+<section><div class="wrap">
+<div class="head"><div><h2 class="rv">{esc(t['sc_how_h'])}</h2></div></div>
+<ol class="steps">{"".join(f'<li class="rv d{i%3}"><h3>{esc(a)}</h3><p>{esc(b)}</p></li>' for i,(a,b) in enumerate(t['sc_how']))}</ol>
+</div></section>
+<section><div class="wrap">
+<div class="head"><div><h2 class="rv">{esc(t['sc_spreads_h'])}</h2></div></div>
+<div class="spreads">{"".join(proof(img(root, f, a_en if en else a_de, 2400, 848), esc(a_en if en else a_de), "rv") for f, a_en, a_de in SPREADS)}</div>
+</div></section>
+<section><div class="wrap">
+<h2 class="rv">{esc(t['sc_galleries'])}</h2>
+<ul class="gal rv d1">{"".join(f'<li><a href="https://www.tillheidrich.de/gallery/{g}/">{esc(n)}</a></li>' for n, g in GALLERIES)}</ul>
+</div></section>
+<section class="final"><div class="wrap">
+<h2 class="rv">{t['final_h']}</h2>
+<div class="ctas rv d1"><a class="btn btn-paper" href="{DL}">{t['dl']}{DOWN}</a><a class="btn btn-ghost ext" href="{REPO}">{t['gh']}{ARROW}</a></div>
+</div></section>
+</main>""")
+    out.append(footer(t, root))
+    return "\n".join(out)
 
 REG = '<div class="wrap reg" aria-hidden="true"><i></i><i></i><i></i><i></i><span></span><em>Billerbook</em></div>'
 
@@ -333,6 +439,14 @@ def page(t):
 <div class="editions">
 {proof(img(root, "hc-spread-1.webp", "Hardcover spread" if en else "Hardcover-Doppelseite", 2000, 707), t['ed_caps'][0], "rv")}
 {proof(img(root, "sc-spread-1.webp", "Softcover spread" if en else "Softcover-Doppelseite", 1400, 990), t['ed_caps'][1], "rv d1")}
+</div></div></section>
+
+<section id="example"><div class="wrap">
+<div class="head"><div><span class="label rv">{t['sc_eyebrow']}</span><h2 class="rv d1">{t['sc_h1']}</h2></div><p class="lead rv d2">{esc(t['sc_lead'])} <a href="{t['sc_slug']}/">{esc(t['sc_book_h'])} →</a></p></div>
+<div class="made">
+<a class="rv" href="{t['sc_slug']}/">{proof(img(root, "bs-cover.webp", "Botanical Stories, cover", 1200, 854), "Cover")}</a>
+<a class="rv d1" href="{t['sc_slug']}/">{proof(img(root, "bs-hero.webp", "Opening spread, Greifswald Botanic Garden" if en else "Auftakt, Botanischer Garten Greifswald", 2400, 848), "Greifswald")}</a>
+<a class="rv d2" href="{t['sc_slug']}/">{proof(img(root, "bs-diptych.webp", "Diptych on film" if en else "Diptychon auf Film", 2400, 848), "On film" if en else "Auf Film")}</a>
 </div></div></section>
 {REG}
 <section><div class="wrap">
@@ -396,7 +510,13 @@ def llms_txt():
              "- Output: print PDFs with TrimBox/BleedBox, interior as single pages or spreads, cover as one sheet with spine. CMYK with ICC output intent or sRGB.",
              "- Spine width from the printer's formula or table per paper and page count, from the printer's cover template PDF, or entered manually.",
              "- Lightroom Classic plug-in keeps a collection per edition and one with missing photos.",
-             "- MCP server with 35 tools for Claude and other AI assistants.",
+             "- 208 formats in 12 print profiles (Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital, CEWE PDF to Book, WhiteWall, PrestoPhoto, WIRmachenDRUCK, standard sizes, custom), plus a special size with free width and height for every binding.",
+             "- Magazines and booklets: saddle stitching, pages in steps of four, cover inside the interior or as a separate four-page PDF (U1-U4).",
+             "- Reads a print shop's data sheet PDF (trim and data size, bleed, safety margin, spine, wrap, page rules, colour, ICC) and sets the edition up from it (MCP tools read_print_spec and apply_print_spec).",
+             "- Seven book templates (monograph, year book, gallery, botanical, travel journal, wedding, Christmas year review), nine bundled open-licence typefaces and your own fonts, text printed as outlines, black and white and toning, background graphics, ISBN barcodes, soft proof against the printer's CMYK profile.",
+             "- Other outputs: proof PDF, screen PDF, interactive HTML book for websites, EPUB 3 fixed layout, CBZ, Instagram carousel, page images, file list for Finder and Lightroom, .billerbook project file. Imports PDFs, web pages and HTML.",
+             "- MCP server with 48 tools for Claude Desktop, Codex, Cursor (local) and ChatGPT or claude.ai (remote, OAuth 2.1 with PKCE and a pairing code; remote clients get no file-path tools).",
+             "- Example: Botanical Stories, a 170-page monograph made from 22 web galleries: " + BASE + "botanical-stories/",
              "", "## Built-in print profiles"]
     for sh in SHOPS:
         st = ", ".join(f"{k}: {b['status']}" for k, b in sh["bindings"].items())
@@ -415,14 +535,17 @@ def main():
     pub = os.path.join(here, "public")
     if os.path.exists(pub): shutil.rmtree(pub)
     shutil.copytree(os.path.join(here, "assets"), os.path.join(pub, "assets"))
+    if os.path.isdir(os.path.join(here, "books")): shutil.copytree(os.path.join(here, "books"), os.path.join(pub, "books"))
     for t in T.values():
         d = os.path.join(pub, t["path"]); os.makedirs(d, exist_ok=True)
         open(os.path.join(d, "index.html"), "w").write(page(t))
         for k in pages: open(os.path.join(d, k + ".html"), "w").write(legal(t, k, pages))
         sd = os.path.join(d, t["shops_slug"]); os.makedirs(sd, exist_ok=True)
         open(os.path.join(sd, "index.html"), "w").write(shops_page(t))
+        cd = os.path.join(d, t["sc_slug"]); os.makedirs(cd, exist_ok=True)
+        open(os.path.join(cd, "index.html"), "w").write(showcase_page(t))
     open(os.path.join(pub, "robots.txt"), "w").write(f"User-agent: *\nAllow: /\nSitemap: {BASE}sitemap.xml\n")
-    urls = ["", "de/", "print-shops/", "de/druckereien/", "impressum.html", "datenschutz.html", "de/impressum.html", "de/datenschutz.html"]
+    urls = ["", "de/", "botanical-stories/", "de/botanical-stories/", "print-shops/", "de/druckereien/", "impressum.html", "datenschutz.html", "de/impressum.html", "de/datenschutz.html"]
     open(os.path.join(pub, "llms.txt"), "w").write(llms_txt())
     open(os.path.join(pub, "sitemap.xml"), "w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{u}</loc></url>" for u in urls) + "</urlset>\n")
     print("built", pub)

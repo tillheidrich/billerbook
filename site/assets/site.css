@@ -199,3 +199,17 @@ footer nav{display:flex;gap:1.5rem;flex-wrap:wrap}
 .shops-page .tag{font:600 .7rem var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:.25rem .55rem;border-radius:99px;background:var(--paper-2);color:var(--ink-2)}
 .shops-page .spec td:last-child{text-align:left;font-weight:500}
 .shops-page .spec td:first-child{width:12rem}
+/* 0.11: example book */
+.made{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);grid-template-rows:auto auto;gap:clamp(1rem,2.5vw,2rem);align-items:start}
+.made>a:first-child{grid-row:span 2}
+.made a{color:inherit;text-decoration:none}
+.made a:hover img{transform:translateY(-2px)}
+.made img{transition:transform .5s cubic-bezier(.16,1,.3,1)}
+.sc-hero .shot{max-width:760px;margin-inline:auto}
+.bookframe{position:relative;aspect-ratio:2400/1000;width:100%;background:#efede8;box-shadow:0 24px 60px -30px oklch(20% .02 60 / .6)}
+.bookframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.spreads{display:grid;gap:clamp(1.5rem,3vw,3rem)}
+.spreads .proof:nth-child(even){width:86%;margin-left:auto}
+.gal{list-style:none;padding:0;margin:1.5rem 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.5rem 2rem}
+.gal a{color:inherit;text-underline-offset:3px}
+@media (max-width:760px){.made{grid-template-columns:1fr}.made>a:first-child{grid-row:auto}.bookframe{aspect-ratio:3/4}.spreads .proof:nth-child(even){width:100%}}

@@ -1,0 +1,827 @@
+{
+  "title": "Botanical Stories – Hardcover",
+  "generator": "Billerbook",
+  "lang": "en",
+  "format": {
+    "w": 297,
+    "h": 210
+  },
+  "spreads": [
+    {
+      "id": "cover",
+      "label": "Cover",
+      "single": true,
+      "img": "img/cover",
+      "w": 1200,
+      "h": 854,
+      "text": [
+        "Botanical Stories",
+        "Glasshouses and gardens, 2019–2024",
+        "Till Heidrich"
+      ]
+    },
+    {
+      "id": "s001",
+      "label": "1",
+      "single": true,
+      "img": "img/s001",
+      "w": 1200,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden",
+        "Greifswald"
+      ]
+    },
+    {
+      "id": "s002",
+      "label": "2–3",
+      "img": "img/s002",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden, Greifswald"
+      ]
+    },
+    {
+      "id": "s003",
+      "label": "4–5",
+      "img": "img/s003",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s004",
+      "label": "6–7",
+      "img": "img/s004",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s005",
+      "label": "8–9",
+      "img": "img/s005",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s006",
+      "label": "10–11",
+      "img": "img/s006",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden",
+        "on film"
+      ]
+    },
+    {
+      "id": "s007",
+      "label": "12–13",
+      "img": "img/s007",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden, on film"
+      ]
+    },
+    {
+      "id": "s008",
+      "label": "14–15",
+      "img": "img/s008",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s009",
+      "label": "16–17",
+      "img": "img/s009",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus Botanicus",
+        "Amsterdam, August 2020"
+      ]
+    },
+    {
+      "id": "s010",
+      "label": "18–19",
+      "img": "img/s010",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus Botanicus, Amsterdam, August 2020"
+      ]
+    },
+    {
+      "id": "s011",
+      "label": "20–21",
+      "img": "img/s011",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s012",
+      "label": "22–23",
+      "img": "img/s012",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s013",
+      "label": "24–25",
+      "img": "img/s013",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s014",
+      "label": "26–27",
+      "img": "img/s014",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus Botanicus",
+        "Amsterdam, on film"
+      ]
+    },
+    {
+      "id": "s015",
+      "label": "28–29",
+      "img": "img/s015",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus Botanicus, Amsterdam, on film"
+      ]
+    },
+    {
+      "id": "s016",
+      "label": "30–31",
+      "img": "img/s016",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s017",
+      "label": "32–33",
+      "img": "img/s017",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus botanicus Leiden",
+        "Leiden"
+      ]
+    },
+    {
+      "id": "s018",
+      "label": "34–35",
+      "img": "img/s018",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus botanicus Leiden, Leiden"
+      ]
+    },
+    {
+      "id": "s019",
+      "label": "36–37",
+      "img": "img/s019",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s020",
+      "label": "38–39",
+      "img": "img/s020",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s021",
+      "label": "40–41",
+      "img": "img/s021",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus botanicus Leiden",
+        "on film"
+      ]
+    },
+    {
+      "id": "s022",
+      "label": "42–43",
+      "img": "img/s022",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Hortus botanicus Leiden, on film"
+      ]
+    },
+    {
+      "id": "s023",
+      "label": "44–45",
+      "img": "img/s023",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s024",
+      "label": "46–47",
+      "img": "img/s024",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín de la Marquesa",
+        "Gran Canaria, 2021"
+      ]
+    },
+    {
+      "id": "s025",
+      "label": "48–49",
+      "img": "img/s025",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín de la Marquesa, Gran Canaria, 2021"
+      ]
+    },
+    {
+      "id": "s026",
+      "label": "50–51",
+      "img": "img/s026",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s027",
+      "label": "52–53",
+      "img": "img/s027",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s028",
+      "label": "54–55",
+      "img": "img/s028",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín de la Marquesa",
+        "Gran Canaria, on film"
+      ]
+    },
+    {
+      "id": "s029",
+      "label": "56–57",
+      "img": "img/s029",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín de la Marquesa, Gran Canaria, on film"
+      ]
+    },
+    {
+      "id": "s030",
+      "label": "58–59",
+      "img": "img/s030",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s031",
+      "label": "60–61",
+      "img": "img/s031",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have",
+        "Copenhagen"
+      ]
+    },
+    {
+      "id": "s032",
+      "label": "62–63",
+      "img": "img/s032",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have, Copenhagen"
+      ]
+    },
+    {
+      "id": "s033",
+      "label": "64–65",
+      "img": "img/s033",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s034",
+      "label": "66–67",
+      "img": "img/s034",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s035",
+      "label": "68–69",
+      "img": "img/s035",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s036",
+      "label": "70–71",
+      "img": "img/s036",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have",
+        "Copenhagen, on film"
+      ]
+    },
+    {
+      "id": "s037",
+      "label": "72–73",
+      "img": "img/s037",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have, Copenhagen, on film"
+      ]
+    },
+    {
+      "id": "s038",
+      "label": "74–75",
+      "img": "img/s038",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s039",
+      "label": "76–77",
+      "img": "img/s039",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín Botánico",
+        "Puerto de la Cruz, Tenerife"
+      ]
+    },
+    {
+      "id": "s040",
+      "label": "78–79",
+      "img": "img/s040",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Jardín Botánico, Puerto de la Cruz, Tenerife"
+      ]
+    },
+    {
+      "id": "s041",
+      "label": "80–81",
+      "img": "img/s041",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s042",
+      "label": "82–83",
+      "img": "img/s042",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s043",
+      "label": "84–85",
+      "img": "img/s043",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Berggarten",
+        "Hanover, June 2023"
+      ]
+    },
+    {
+      "id": "s044",
+      "label": "86–87",
+      "img": "img/s044",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Berggarten, Hanover, June 2023"
+      ]
+    },
+    {
+      "id": "s045",
+      "label": "88–89",
+      "img": "img/s045",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s046",
+      "label": "90–91",
+      "img": "img/s046",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s047",
+      "label": "92–93",
+      "img": "img/s047",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Tropical House",
+        "Weltvogelpark Walsrode"
+      ]
+    },
+    {
+      "id": "s048",
+      "label": "94–95",
+      "img": "img/s048",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Tropical House, Weltvogelpark Walsrode"
+      ]
+    },
+    {
+      "id": "s049",
+      "label": "96–97",
+      "img": "img/s049",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s050",
+      "label": "98–99",
+      "img": "img/s050",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s051",
+      "label": "100–101",
+      "img": "img/s051",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Tropical Greenhouses",
+        "Planten un Blomen, Hamburg"
+      ]
+    },
+    {
+      "id": "s052",
+      "label": "102–103",
+      "img": "img/s052",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Tropical Greenhouses, Planten un Blomen, Hamburg"
+      ]
+    },
+    {
+      "id": "s053",
+      "label": "104–105",
+      "img": "img/s053",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s054",
+      "label": "106–107",
+      "img": "img/s054",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s055",
+      "label": "108–109",
+      "img": "img/s055",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden",
+        "October 2023"
+      ]
+    },
+    {
+      "id": "s056",
+      "label": "110–111",
+      "img": "img/s056",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden, October 2023"
+      ]
+    },
+    {
+      "id": "s057",
+      "label": "112–113",
+      "img": "img/s057",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s058",
+      "label": "114–115",
+      "img": "img/s058",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s059",
+      "label": "116–117",
+      "img": "img/s059",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden",
+        "October 2023, on film"
+      ]
+    },
+    {
+      "id": "s060",
+      "label": "118–119",
+      "img": "img/s060",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Greifswald Botanic Garden, October 2023, on film"
+      ]
+    },
+    {
+      "id": "s061",
+      "label": "120–121",
+      "img": "img/s061",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s062",
+      "label": "122–123",
+      "img": "img/s062",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Utrecht University Botanic Gardens",
+        "October 2023"
+      ]
+    },
+    {
+      "id": "s063",
+      "label": "124–125",
+      "img": "img/s063",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Utrecht University Botanic Gardens, October 2023"
+      ]
+    },
+    {
+      "id": "s064",
+      "label": "126–127",
+      "img": "img/s064",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s065",
+      "label": "128–129",
+      "img": "img/s065",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s066",
+      "label": "130–131",
+      "img": "img/s066",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Utrecht University Botanic Gardens",
+        "October 2023, on film"
+      ]
+    },
+    {
+      "id": "s067",
+      "label": "132–133",
+      "img": "img/s067",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Utrecht University Botanic Gardens, October 2023, on film"
+      ]
+    },
+    {
+      "id": "s068",
+      "label": "134–135",
+      "img": "img/s068",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s069",
+      "label": "136–137",
+      "img": "img/s069",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have",
+        "Aarhus"
+      ]
+    },
+    {
+      "id": "s070",
+      "label": "138–139",
+      "img": "img/s070",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have, Aarhus"
+      ]
+    },
+    {
+      "id": "s071",
+      "label": "140–141",
+      "img": "img/s071",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s072",
+      "label": "142–143",
+      "img": "img/s072",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s073",
+      "label": "144–145",
+      "img": "img/s073",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s074",
+      "label": "146–147",
+      "img": "img/s074",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have",
+        "Aarhus, on film"
+      ]
+    },
+    {
+      "id": "s075",
+      "label": "148–149",
+      "img": "img/s075",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Botanisk Have, Aarhus, on film"
+      ]
+    },
+    {
+      "id": "s076",
+      "label": "150–151",
+      "img": "img/s076",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s077",
+      "label": "152–153",
+      "img": "img/s077",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Gärtnerei Bernstorff",
+        "Den Gamle By, Aarhus"
+      ]
+    },
+    {
+      "id": "s078",
+      "label": "154–155",
+      "img": "img/s078",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "The plant collection of Den Gamle By",
+        "The nursery was founded in the 1880s as a market garden. Today the museum’s gardeners grow the plants that once stood on windowsills and now fill the houses of Den Gamle By, along with vegetables and summer flowers.\n\nThe parade greenhouse dates from around 1850 and first stood at Bernstorff Palace. Buildings like it were made to show the plant collections of their time. It also holds the museum’s historic potted plants, many of them tended for more than a hundred years, through several generations of owners.\n\nSource: Den Gamle By, Aarhus"
+      ]
+    },
+    {
+      "id": "s079",
+      "label": "156–157",
+      "img": "img/s079",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Gärtnerei Bernstorff, Den Gamle By, Aarhus"
+      ]
+    },
+    {
+      "id": "s080",
+      "label": "158–159",
+      "img": "img/s080",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s081",
+      "label": "160–161",
+      "img": "img/s081",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s082",
+      "label": "162–163",
+      "img": "img/s082",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Randers Regnskov",
+        "Randers, Denmark"
+      ]
+    },
+    {
+      "id": "s083",
+      "label": "164–165",
+      "img": "img/s083",
+      "w": 2400,
+      "h": 848,
+      "text": [
+        "Randers Regnskov, Randers, Denmark"
+      ]
+    },
+    {
+      "id": "s084",
+      "label": "166–167",
+      "img": "img/s084",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s085",
+      "label": "168–169",
+      "img": "img/s085",
+      "w": 2400,
+      "h": 848,
+      "text": []
+    },
+    {
+      "id": "s086",
+      "label": "170",
+      "single": true,
+      "img": "img/s086",
+      "w": 1200,
+      "h": 848,
+      "text": []
+    }
+  ]
+}
