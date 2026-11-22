@@ -6,7 +6,7 @@ import os, sys, html, shutil
 
 REPO = "https://github.com/tillheidrich/billerbook"
 DL = REPO + "/releases/latest"
-VERSION = "0.11"
+VERSION = "0.11.1"
 BASE = "https://billerbook.heidrich-digital.de/"
 
 ARROW = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>'
@@ -211,39 +211,6 @@ def mm(v):
 
 BIND = {'en': {'hardcover': 'Hardcover', 'softcover': 'Softcover / paperback', 'layflat': 'Layflat', 'saddle': 'Saddle stitch (magazine)'}, 'de': {'hardcover': 'Hardcover', 'softcover': 'Softcover', 'layflat': 'Layflat', 'saddle': 'Rückendrahtheftung (Magazin)'}}
 
-def shops_page(t):
-    root = "../../" if t["path"] else "../"
-    lang = t['lang']
-    url = BASE + t['path'] + t['shops_slug'] + '/'
-    other_slug = ('druckereien' if lang == 'en' else 'print-shops')
-    en_url = BASE + 'print-shops/'; de_url = BASE + 'de/druckereien/'
-    out = [head(t, t['shops_title'], t['shops_desc'], url, en_url, de_url, root, ld=shops_ld(t, url)), nav(t, root, '../')]
-    out.append(f'<main class="wrap legal shops-page"><p class="label red">Billerbook</p><h1>{esc(t["shops_h1"])}</h1><p class="lead">{esc(t["shops_intro"])}</p>')
-    for sh in SHOPS:
-        out.append(f'<section class="shop" id="{sh["id"]}"><h2>{esc(sh["name"])}</h2><p class="muted">{esc(sh["region"])}{" · " + "<a href=\"" + sh["url"] + "\">" + esc(sh["url"].replace("https://", "")) + "</a>" if sh.get("url") else ""}</p>')
-        out.append(f'<p>{esc(L(sh.get("notes") or {}, lang))}</p>')
-        for k, b in sh['bindings'].items():
-            cov = b['cover']
-            cover = f"{t['lbl_wrap']} {mm(cov['wrap'])}" + (f", {t['lbl_joint']} {mm(cov['joint'])}" if cov.get('joint') else '') + (f", {t['lbl_hinge']} {mm(cov['hinge'])}" if cov.get('hinge') else '')
-            pages = b.get('pages') or {}
-            pr = ' · '.join(x for x in [f"min {pages['min']}" if pages.get('min') else '', f"max {pages['max']}" if pages.get('max') else '', f"step {pages['step']}" if pages.get('step') else ''] if x) or '–'
-            papers = ', '.join(L(x['label'], lang) for x in b.get('papers', []))
-            rows = [
-                (t['lbl_bleed'], mm(b['bleed'])), (t['lbl_safety'], mm(b['safety'])),
-                (t['col'][2], t['interior_names'][b['interior']] + (f", {t['lbl_blank']}" if b.get('blankEnds') else '')),
-                (t['lbl_pages'], pr), (t['lbl_colour'], 'sRGB' if b['colour'] == 'srgb' else 'CMYK'),
-                (t['col'][3], t['spine_names'][shop_spine(b)]), (t['lbl_cover'], cover),
-            ]
-            if papers: rows.append((t['lbl_papers'], papers))
-            fm = ', '.join(L(f['label'], lang) for f in sh['formats'] if f['binding'] == k)
-            rows.append((t['lbl_formats'], fm))
-            out.append(f'<h3>{esc(BIND[t["lang"]].get(k, k.capitalize()))} <span class="tag">{esc(t["status_names"].get(b["status"], b["status"]))}</span></h3><table class="spec"><tbody>' + ''.join(f'<tr><td>{esc(a)}</td><td>{esc(v)}</td></tr>' for a, v in rows) + '</tbody></table>')
-        src = ' '.join(f'<a href="{esc(u)}" rel="nofollow noopener">[{i+1}]</a>' for i, u in enumerate(sh['sources']))
-        out.append(f'<p class="note">{esc(t["lbl_sources"])}: {src} · {esc(t["lbl_checked"])} {esc(sh.get("checked", ""))}</p></section>')
-    out.append(f'<p class="lead">{esc(t["lbl_any"])}</p></main>')
-    out.append(footer(t, root))
-    return '\n'.join(out)
-
 def app_ld(t, url):
     en = t['lang'] == 'en'
     data = [{
@@ -267,62 +234,6 @@ def shops_ld(t, url):
         "@context": "https://schema.org", "@type": "TechArticle", "headline": t['shops_title'], "inLanguage": t['lang'], "url": url,
         "about": [sh['name'] for sh in SHOPS], "author": {"@type": "Person", "name": "Till Heidrich"}, "dateModified": SHOPS[0].get('checked'),
     }]
-
-def head(t, title, desc, canonical, alt_en, alt_de, root, ld=None, og="og.jpg"):
-    return f"""<!doctype html>
-<html lang="{t['lang']}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{esc(title)}</title>
-<meta name="description" content="{esc(desc)}">
-<link rel="canonical" href="{canonical}">
-<link rel="alternate" hreflang="en" href="{alt_en}">
-<link rel="alternate" hreflang="de" href="{alt_de}">
-<link rel="alternate" hreflang="x-default" href="{alt_en}">
-<meta name="theme-color" content="#f5f0e6">
-<meta property="og:title" content="{esc(title)}">
-<meta property="og:description" content="{esc(desc)}">
-<meta property="og:image" content="{BASE}assets/img/{og}">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" href="{root}assets/img/favicon.png">
-<link rel="apple-touch-icon" href="{root}assets/img/apple-touch-icon.png">
-<link rel="preload" href="{root}assets/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="{root}assets/site.css">
-{"".join('<script type="application/ld+json">' + _json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + '</script>' for x in (ld or []))}
-</head>
-<body>"""
-
-def nav(t, root, home="./"):
-    ids = ["features", "editions", "print", "faq"]
-    links = "".join(f'<a class="l hide-s" href="{home}#{i}">{esc(n)}</a>' for i, n in zip(ids, t["nav"]))
-    other = 'de' if t['lang'] == 'en' else 'en'
-    return f"""<header class="nav"><div class="wrap">
-<a class="brand" href="{home}"><img src="{root}assets/img/icon.png" alt="" width="28" height="28">Billerbook</a>
-{links}<a class="l" href="{t['other']}" hreflang="{other}" lang="{other}">{t['other_label']}</a>
-<a class="btn btn-red btn-sm" href="{DL}">{esc(t['dl_short'])}{DOWN}</a>
-</div></header>"""
-
-def footer(t, root):
-    return f"""<footer><div class="wrap row">
-<p class="m0">{t['foot_by']} AGPL-3.0.</p>
-<nav><a href="{REPO}">{t['source']}</a><a href="{root}{t['path']}impressum.html">{t['imprint']}</a><a href="{root}{t['path']}datenschutz.html">{t['privacy']}</a><a href="{t['other']}">{t['other_label']}</a></nav>
-</div></footer>
-<script>
-document.documentElement.classList.add('js');
-const io=new IntersectionObserver(es=>es.forEach(e=>{{if(e.isIntersecting){{e.target.classList.add('in');io.unobserve(e.target)}}}}),{{rootMargin:'0px 0px -6% 0px'}});
-document.querySelectorAll('.rv').forEach(el=>io.observe(el));
-addEventListener('message',e=>{{const f=[...document.querySelectorAll('.bookframe iframe')].find(x=>x.contentWindow===e.source);if(f&&e.origin===location.origin&&e.data&&e.data.billerbook==='height'&&e.data.h>0){{f.style.aspectRatio='auto';f.style.height=e.data.h+'px'}}}});
-</script>
-</body></html>"""
-
-def img(root, name, alt, w, h, lazy=True):
-    return f'<img src="{root}assets/img/{name}" alt="{esc(alt)}" width="{w}" height="{h}"{" loading=\"lazy\"" if lazy else ""} decoding="async">'
-
-def proof(inner, cap="", cls=""):
-    c = f'<figcaption>{cap}</figcaption>' if cap else ""
-    return f'<figure class="proof m0 {cls}"><span class="cm"></span>{inner}{c}</figure>'
 
 GALLERIES = [
     ("Botanischer Garten der Uni Greifswald", "botanischer-garten-der-uni-greifswald"), ("Hortus Botanicus Amsterdam", "hortus-botanicus-amsterdam-august-2020"),
@@ -355,128 +266,6 @@ def showcase_ld(t, url):
             {"@type": "ListItem", "position": 2, "name": "Botanical Stories", "item": url}]
     }]
 
-def showcase_page(t):
-    root = "../../" if t["path"] else "../"
-    en = t["lang"] == "en"
-    url = BASE + t['path'] + t['sc_slug'] + '/'
-    out = [head(t, t['sc_title'], t['sc_desc'], url, BASE + 'botanical-stories/', BASE + 'de/botanical-stories/', root, ld=showcase_ld(t, url), og="bs-og.jpg"), nav(t, root, '../')]
-    book = f"{root}books/botanical-stories/index.html"
-    out.append(f"""<main>
-<section class="hero sc-hero"><div class="wrap">
-<div class="top">
-<div><p class="label red rv">{t['sc_eyebrow']}</p><h1 class="rv d1 h1">{t['sc_h1']}</h1></div>
-<div class="side"><p class="lead rv d2">{esc(t['sc_lead'])}</p>
-<div class="ctas rv d2"><a class="btn btn-red" href="{DL}">{esc(t['sc_cta'])}{DOWN}</a></div></div>
-</div>
-<div class="shot">{proof(img(root, "bs-cover.webp", "Botanical Stories, cover" if en else "Botanical Stories, Umschlag", 1200, 854, lazy=False), "Hardcover · 297 × 210 mm", "rv d2 sc-cover")}</div>
-</div></section>
-<section class="dark" id="book"><div class="wrap">
-<div class="head"><div><h2 class="rv">{esc(t['sc_book_h'])}</h2></div><p class="lead rv d1">{esc(t['sc_book_note'])}</p></div>
-<div class="bookframe rv d1"><iframe src="{book}" title="Botanical Stories" loading="lazy" allow="fullscreen" allowfullscreen></iframe></div>
-</div></section>
-<section><div class="wrap">
-<div class="head"><div><h2 class="rv">{esc(t['sc_how_h'])}</h2></div></div>
-<ol class="steps">{"".join(f'<li class="rv d{i%3}"><h3>{esc(a)}</h3><p>{esc(b)}</p></li>' for i,(a,b) in enumerate(t['sc_how']))}</ol>
-</div></section>
-<section><div class="wrap">
-<div class="head"><div><h2 class="rv">{esc(t['sc_spreads_h'])}</h2></div></div>
-<div class="spreads">{"".join(proof(img(root, f, a_en if en else a_de, 2400, 848), esc(a_en if en else a_de), "rv") for f, a_en, a_de in SPREADS)}</div>
-</div></section>
-<section><div class="wrap">
-<h2 class="rv">{esc(t['sc_galleries'])}</h2>
-<ul class="gal rv d1">{"".join(f'<li><a href="https://www.tillheidrich.de/gallery/{g}/">{esc(n)}</a></li>' for n, g in GALLERIES)}</ul>
-</div></section>
-<section class="final"><div class="wrap">
-<h2 class="rv">{t['final_h']}</h2>
-<div class="ctas rv d1"><a class="btn btn-paper" href="{DL}">{t['dl']}{DOWN}</a><a class="btn btn-ghost ext" href="{REPO}">{t['gh']}{ARROW}</a></div>
-</div></section>
-</main>""")
-    out.append(footer(t, root))
-    return "\n".join(out)
-
-REG = '<div class="wrap reg" aria-hidden="true"><i></i><i></i><i></i><i></i><span></span><em>Billerbook</em></div>'
-
-def page(t):
-    root = "../" if t["path"] else ""
-    en = t["lang"] == "en"
-    out = [head(t, t["title"], t["desc"], BASE + t["path"], BASE, BASE + "de/", root, ld=app_ld(t, BASE + t["path"])), nav(t, root)]
-    out.append(f"""<main>
-<section class="hero" aria-labelledby="h1"><div class="wrap">
-<div class="top">
-<div><p class="label red rv">{t['eyebrow']}</p><h1 id="h1" class="rv d1 h1">{t['h1']}</h1></div>
-<div class="side"><p class="lead rv d2">{t['lead']}</p>
-<div class="ctas rv d2"><a class="btn btn-red" href="{DL}">{t['dl']}{DOWN}</a><a class="btn btn-line ext" href="{REPO}">{t['gh']}{ARROW}</a></div>
-<p class="meta rv d3">{t['meta']}</p></div>
-</div>
-<div class="shot"><div class="row">
-{proof(img(root, "app-editor.webp", "The Billerbook editor: photo pool, spread with crop marks, layouts and preflight" if en else "Der Billerbook-Editor: Fotobestand, Doppelseite, Layouts und Prüfung", 2000, 1250, lazy=False), t['hero_caps'][0], "rv d2")}
-{proof(img(root, "sc-spread-2.webp", "Portrait softcover spread with the same photos" if en else "Softcover-Doppelseite hochkant mit denselben Fotos", 1400, 990, lazy=False), t['hero_caps'][1], "rv d3")}
-</div></div>
-</div></section>
-{REG}
-<div class="wrap story">
-<div class="label rv">{t["story_num"]}</div>
-<div>{"".join(f'<p class="rv">{p}</p>' for p in t['story'])}</div>
-</div>
-
-<section id="features" class="dark"><div class="wrap">
-<div class="head"><div><span class="label rv">{t['feat_eyebrow']}</span><h2 class="rv d1">{t['feat_h']}</h2></div><p class="lead rv d2">{t['feat_lead']}</p></div>""")
-    cards = t["cards"]; labels = t["klabels"]
-    shots = [i for i, c in enumerate(cards) if c[3]]
-    for n, i in enumerate(shots):
-        _, h3, p, shot, _ = cards[i]
-        flip = " flip" if n % 2 else ""
-        out.append(f'<div class="feat{flip}"><div class="txt rv"><span class="k">{esc(labels[i])}</span><h3>{esc(h3)}</h3><p>{esc(p)}</p></div>{proof(img(root, shot, h3, 1600, 1000), "", "rv d1")}</div>')
-    kc = cards[1]; ac = cards[2]
-    keys = "".join(f"<kbd>{esc(k)}</kbd><span>{esc(v)}</span>" for k, v in t["keys"])
-    you, bot = t["prompt"].split("\n", 1)
-    def bubble(x, cls):
-        lab, txt = x.split("</b>", 1)
-        return f'<p class="{cls}"><b>{lab.replace("<b>","").rstrip(":")}</b>{txt.strip()}</p>'
-    out.append(f"""<div class="pair">
-<div class="rv"><span class="k kb">{esc(labels[1])}</span><h3>{esc(kc[1])}</h3><p>{esc(kc[2])}</p><div class="keys">{keys}</div></div>
-<div class="rv d1"><span class="k kb">{esc(labels[2])}</span><h3>{esc(ac[1])}</h3><p>{esc(ac[2])}</p><div class="chat">{bubble(you, "you")}{bubble(bot, "")}</div></div>
-</div>
-</div></section>
-
-<section id="editions"><div class="wrap">
-<div class="head"><div><span class="label rv">{t['ed_eyebrow']}</span><h2 class="rv d1">{t['ed_h']}</h2></div><p class="lead rv d2">{t['ed_lead']}</p></div>
-<div class="editions">
-{proof(img(root, "hc-spread-1.webp", "Hardcover spread" if en else "Hardcover-Doppelseite", 2000, 707), t['ed_caps'][0], "rv")}
-{proof(img(root, "sc-spread-1.webp", "Softcover spread" if en else "Softcover-Doppelseite", 1400, 990), t['ed_caps'][1], "rv d1")}
-</div></div></section>
-
-<section id="example"><div class="wrap">
-<div class="head"><div><span class="label rv">{t['sc_eyebrow']}</span><h2 class="rv d1">{t['sc_h1']}</h2></div><p class="lead rv d2">{esc(t['sc_lead'])} <a href="{t['sc_slug']}/">{esc(t['sc_book_h'])} →</a></p></div>
-<div class="made">
-<a class="rv" href="{t['sc_slug']}/">{proof(img(root, "bs-cover.webp", "Botanical Stories, cover", 1200, 854), "Cover")}</a>
-<a class="rv d1" href="{t['sc_slug']}/">{proof(img(root, "bs-hero.webp", "Opening spread, Greifswald Botanic Garden" if en else "Auftakt, Botanischer Garten Greifswald", 2400, 848), "Greifswald")}</a>
-<a class="rv d2" href="{t['sc_slug']}/">{proof(img(root, "bs-diptych.webp", "Diptych on film" if en else "Diptychon auf Film", 2400, 848), "On film" if en else "Auf Film")}</a>
-</div></div></section>
-{REG}
-<section><div class="wrap">
-<div class="head"><div><span class="label rv">{t['how_eyebrow']}</span><h2 class="rv d1">{t['how_h']}</h2></div></div>
-<ol class="steps">{"".join(f'<li class="rv d{i%3}"><h3>{esc(a)}</h3><p>{esc(b)}</p></li>' for i,(a,b) in enumerate(t['steps']))}</ol>
-</div></section>
-
-<section id="print"><div class="wrap print">
-<div><span class="label rv">{t['pr_eyebrow']}</span><h2 class="rv d1 prh">{t['pr_h']}</h2><p class="lead rv d2">{t['pr_lead']}</p></div>
-<div class="ticket rv d1"><span class="label">{t['shops_label']}</span><table class="spec shops"><tbody>{shop_rows(t)}</tbody></table><p class="note"><a href="{root}{t['path']}{t['shops_slug']}/">{esc(t['shops_more'])}</a></p></div>
-</div></section>
-
-<section id="faq"><div class="wrap faq">
-<h2 class="rv">{t['faq_h']}</h2>
-<div class="rv d1">{"".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q,a in t['faq'])}</div>
-</div></section>
-
-<section class="final"><div class="wrap">
-<h2 class="rv">{t['final_h']}</h2>
-<div class="ctas rv d1"><a class="btn btn-paper" href="{DL}">{t['dl']}{DOWN}</a><a class="btn btn-ghost ext" href="{REPO}">{t['gh']}{ARROW}</a></div>
-</div></section>
-</main>""")
-    out.append(footer(t, root))
-    return "\n".join(out)
-
 def legal_pages(mail):
     m = f'<a href="mailto:{mail}">{mail}</a>' if mail else 'siehe <a href="https://tillheidrich.de/impressum/">Impressum auf tillheidrich.de</a>'
     return {
@@ -496,13 +285,6 @@ def legal_pages(mail):
     }
 
 EN_NOTE = '<p class="muted">This page is in German because German law requires it.</p>'
-
-def legal(t, key, pages):
-    title, body = pages[key]
-    root = "../" if t["path"] else ""
-    note = EN_NOTE if t["lang"] == "en" else ""
-    return "\n".join([head(t, f"{title} · Billerbook", title, BASE + t["path"] + key + ".html", BASE + key + ".html", BASE + "de/" + key + ".html", root),
-                      nav(t, root), f'<main class="wrap legal"><h1>{title}</h1>{note}{body}</main>', footer(t, root)])
 
 def llms_txt():
     t = T["en"]
@@ -532,6 +314,590 @@ def llms_txt():
         lines += [f"### {q}", a, ""]
     return "\n".join(lines)
 
+
+# ---------- Copy for the Benchkey layout (home, how it works, AI) ----------
+K = {
+ "en": dict(
+  nav=[("how", "How it works"), ("ai", "AI"), ("shops", "Print shops"), ("sc", "Example book")],
+  slug_how="how-it-works", slug_ai="ai",
+  h1="Lay it out on your Mac. <em>Print it anywhere.</em>",
+  lede="Billerbook is a free photo book editor for the Mac. Drop in a folder, a Lightroom collection or a Capture One album, flip through layouts with the space bar, and export the PDF your print shop asks for: bleed, spine and cover included. <b>No account, and your photos stay on your Mac.</b>",
+  who="For photographers, families with a yearly album, clubs with a magazine, and anyone who has fixed a print PDF in InDesign once too often.",
+  cta2="How a book comes together",
+  sheet_top="Botanical Stories", sheet_sub="Hardcover · A4 landscape", sheet_tag="Spread 2–3",
+  sheet_cap=("Trim 297 × 210 mm", "PDF page 303 × 216 mm"),
+  sheet_h="Ready for the print shop",
+  sheet_rows=[("Bleed", "3 mm on every outer edge", "ok", "OK"), ("Cover", "645 × 245 mm, spine 11 mm for 170 pages", "ok", "Sized"),
+              ("Colour", "CMYK, checked in soft proof", "ok", "OK"), ("Glue zone", "No text within 7 mm of the gutter", "", "Checked")],
+  sheet_keys="Space next layout · F fill or fit · V full bleed",
+  toast1="Spread 14: two horizons are now a full-bleed pair", toast2="Preflight clean · 170 pages",
+  specs_lead="Writes the files a print shop asks for.",
+  specs=[("Interior PDF", "Trim and bleed boxes, ICC output intent"), ("Cover PDF", "Back, spine and front on one sheet"), ("Proof PDF", "Guides and numbered checks"), ("IDML", "Editable in Affinity and InDesign"), ("HTML book", "Plus EPUB for e-readers")],
+  state='<span class="hl">The PDF your print shop wants</span> comes out of the same app you lay the book out in. No repair round in InDesign, <span class="hl">and no guessing the spine.</span>',
+  board_h="Ten print shops, 208 formats.", board_h2="Or any other, from its data sheet.",
+  board_p="Each print profile holds what differs between shops: bleed, page rules, spine and cover. The table shows what Billerbook uses today.",
+  board_bar="Print profiles", board_q="Search print shops",
+  board_cols=["Print shop", "Bindings", "Spine from", "Status"],
+  thread_h="Setting up a print shop that is not listed",
+  thread_p="Give your assistant the print shop's data sheet. It reads the numbers and sets up the book.",
+  thread=[("me", "Here is the data sheet from WIRmachenDRUCK. Set up the hardcover like it says.", "You"),
+          ("them", "Trim 210 × 297 mm, data size 216 × 303, bleed 3 mm, safety margin 5 mm, glue zone 7 mm. The cover wrap is 15 mm, worked out from their cover formula.", "Claude, via Billerbook"),
+          ("sys", "Edition set up from the data sheet and saved as a print profile for this shop.", ""),
+          ("me", "And the spine?", "You"),
+          ("them", "The sheet has no spine table. I used their order form value, please check it there before you upload.", "Claude")],
+  field_h="Photos from where they already are.", field_h2="One book.",
+  tabs=[("lr", "Lightroom Classic"), ("c1", "Capture One"), ("folder", "Any folder"), ("web", "A web page")],
+  panels={
+   "lr": ("Lightroom · Greenhouses", [("Read", "Catalog opened read-only", "ok", "OK"), ("118", "Photos from two collections", "", "Pool"), ("Exports", "Full-size files matched by name", "ok", "118/118"), ("Book", "Book module book taken over, 24 pages", "", "Import")],
+          "Plug-in for Lightroom", "Shows which photos are in the book", "A collection per edition, and one with the photos still missing."),
+   "c1": ("Capture One · Album Botanik", [("Album", "Read through AppleScript", "ok", "OK"), ("64", "Variants in the album", "", "Pool"), ("JPEG", "Processed files matched by name", "ok", "Matched"), ("RAW", "Waits until it is processed", "no", "Later")],
+          "Mac only", "Capture One must be open", "Billerbook only reads. Edits stay in Capture One."),
+   "folder": ("~/Pictures/Iceland 2026", [("142", "JPEG, TIFF, PNG, WebP or HEIC", "", "Pool"), ("Date", "Capture time from EXIF", "ok", "Sorted"), ("Stars", "Ratings from XMP", "ok", "Read"), ("Text", "Captions from IPTC", "ok", "Read")],
+          "No upload", "Nothing leaves the Mac", "Originals are never changed. Tones and crops live in the project."),
+   "web": ("tillheidrich.de · 22 galleries", [("22", "Gallery pages read", "ok", "OK"), ("8", "Photos per garden, evenly spread", "", "Picked"), ("H1", "Titles became chapter pages", "ok", "Chapters"), ("Text", "Paragraphs became text pages", "", "Pages")],
+          "How the example book was made", "A website in, a book out", "Botanical Stories came from 22 galleries in one import."),
+  },
+  notes=[("Several editions.", "A big landscape hardcover and a short portrait softcover from the same photos."), ("Smart crops.", "Billerbook finds the subject of each photo and crops around it."), ("Captions.", "From the photo's metadata, editable on the page."), ("Your fonts.", "Nine open-licence typefaces built in, your own TTF or OTF on top.")],
+  steps_h="From folder to print shop", steps_h2="in an afternoon.",
+  steps_cta="Download Billerbook",
+  steps=[("Add photos.", "A folder, a Lightroom collection, a Capture One album or a web page."), ("Pick the print shop.", "Format, paper and binding; the spine follows from the page count."),
+         ("Lay it out.", "Auto layout or a template, then the space bar for alternatives."), ("Check it.", "Preflight, soft proof and the whole book on one sheet."), ("Export and upload.", "Interior and cover as the shop wants them.")],
+  exp_seg=["Print", "Check", "Share", "Edit elsewhere"],
+  exp_fields=[("Edition", "Hardcover · 170 pages"), ("Print shop", "WIRmachenDRUCK · A4 landscape")],
+  exp_label="Files", exp_chk=[("Interior PDF", True), ("Cover PDF", True), ("Proof PDF", True), ("Page overview", True), ("IDML for Affinity", False), ("HTML book", False)],
+  exp_pages=("Pages", "All, or e.g. 1–12, 40"), exp_foot=("4 files to ~/Desktop", "Export"),
+  keys_h="Layout at the speed of a key.", keys_h2="The slow parts are one keystroke here.",
+  keys=[("Space", "Next arrangement of the photos on the page"), ("F", "Fill the frame or show the whole photo"), ("V", "Turn the photo into a full-bleed page"), ("1–9", "A layout with that many photos"), ("⌘D", "Duplicate the page"), ("⇧⌘C ⇧⌘V", "Copy a layout, paste it on other pages")],
+  show_h="See the whole book.", show_h2="Then print it.",
+  show_p="The overview shows every spread at once, so repeated layouts and a lopsided rhythm stand out before you order. The same sheet goes out as a PDF for sign-off, and your assistant sees it too.",
+  show_cta="Page through Botanical Stories", show_cap="Botanical Stories, spreads 1 to 47 in the page overview",
+  off_h="No account, no upload.", off_h2="Your photos stay on your Mac.",
+  off_p="Billerbook runs on your Mac. It reads photos where they are and writes the PDFs next to them. An AI assistant in the cloud connects only after you type a six-digit code from the app, and it gets no file paths.",
+  off_svg=dict(photos="Your photos", photos2="Folder, Lightroom, Capture One", app="Billerbook", app2="on your Mac", pdf="Print PDFs", pdf2="Interior and cover", shop="Print shop", shop2="You upload", ai="AI assistant", ai2="Six-digit code, no file paths"),
+  story_h="Why it exists",
+  log_h="Release notes", log_sub="What changed lately. Every version is on GitHub with its download.",
+  log=[("0.11.1", "Fixes from an independent security review of the new import and export paths.", "2026-11-22"),
+       ("0.11.0", "208 formats, magazines, data-sheet setup, templates and fonts, IDML for Affinity and InDesign, Capture One, page overview, ChatGPT and claude.ai over OAuth.", "2026-11-22"),
+       ("0.10.0", "Print shops worldwide, spreads export, cover templates, the Lightroom plug-in and the Book module's page tools.", "2026-11-21")],
+  faq_h="Questions",
+  end_h="Pick the photos.", end_u="Print the book.",
+  foot_about="A free photo book editor for the Mac, made by Till Heidrich in Tostedt, Germany. Open source under the AGPL-3.0.",
+  foot_cols=[("Product", [("how", "How it works"), ("ai", "AI assistants"), ("shops", "Print shops"), ("sc", "Example book")]),
+             ("Resources", [("gh", "Source code"), ("rel", "All releases"), ("mcp", "MCP documentation"), ("llms", "llms.txt")]),
+             ("Legal", [("imp", "Imprint"), ("priv", "Privacy"), ("other", "Deutsch")])],
+  foot_base="Billerbook is not affiliated with the print shops named on this site.",
+  menu="Menu",
+  # how it works
+  how_title="How Billerbook works: from photos to print-ready PDFs",
+  how_desc="Photos in from folders, Lightroom Classic or Capture One, layouts and templates, editions, keyboard, cover and spine, preflight, soft proof and every export Billerbook writes.",
+  how_h1="How a book comes together.", how_lead="From a folder of photos to the files your print shop asks for, in the order you work.",
+  how_blocks=[
+   ("Photos in", "From where they are.", "Billerbook reads photos where you keep them and never changes the originals.",
+    [("Any folder", "JPEG, TIFF, PNG, WebP, HEIC; date, stars and captions from the metadata."), ("Lightroom Classic", "Collections as the pool, previews for layout, full-size exports for print. Books from the Book module come over with their pages."), ("Capture One", "Albums, projects and groups of the open catalog or session; processed files are matched by name."), ("Web pages and PDFs", "A gallery page or an HTML file becomes chapters and plates; a PDF becomes pages.")]),
+   ("Layouts and templates", "Start from a style.", "Seven templates set fonts, colours, cover and page sequence: Monograph, Year book, Gallery, Botanical, Travel journal, Wedding and Christmas year review. After that, every page is yours.",
+    [("Photo book layouts", "Plates on the Van de Graaf canon, chapter pages, text pages, diptychs and full-bleed spreads."), ("Free frames", "Move and size frames in millimetres, with snapping to thirds and the canon block."), ("Your layouts", "Save a page as a layout and use it on any page with the same number of photos."), ("Tones and graphics", "Black and white, four tones, paper textures and background graphics.")]),
+   ("Editions", "Several books from one set of photos.", "A detailed landscape hardcover for you and a shorter portrait softcover for the family share the same photos. Each edition has its own print shop, format and page count, and layouts adapt when the format changes.", None),
+   ("Cover and spine", "Sized by the page count.", "The cover follows from page count and paper: spine width from the printer's formula or table, turn-in and hinge from the profile, or exactly from the cover template PDF you download from the shop. ISBN barcodes are drawn as vectors.", None),
+   ("Check before you order", "Three ways to look.", "Preflight lists what a print shop would reject. Soft proof shows the colours after the printer's CMYK conversion and marks what shifts. The page overview puts every spread on one sheet.",
+    [("Preflight", "Low resolution, text in the glue zone, page limits, text that does not fit, small text, barcode rules."), ("Soft proof", "The printer's ICC profile applied on screen, with a gamut warning."), ("Proof PDF", "Trim, safe area and glue zone drawn in, every message numbered on page 1."), ("Page overview", "Every spread on A4 sheets with page numbers, cover first.")]),
+  ],
+  exports_h="Every file Billerbook writes", exports_cols=["Export", "What you get"],
+  exports=[("Interior PDF", "Single pages or spreads, trim and bleed boxes, CMYK with ICC output intent or sRGB, text as outlines"), ("Cover PDF", "Back, spine and front on one sheet; magazines as a four-page cover"), ("Proof PDF", "Guides and numbered preflight messages"), ("Page overview PDF", "All spreads on A4 landscape sheets with page numbers"),
+           ("IDML", "Editable layout for Affinity (free) and InDesign, photos in a Links folder"), ("Screen PDF", "Small RGB file of the double pages"), ("HTML book", "Interactive book for your website, one page at a time on phones"), ("EPUB", "Fixed layout for e-readers"),
+           ("Images", "Pages or spreads as JPEG or PNG; Instagram carousel at 1080 × 1350"), ("File list", "CSV and TXT of every photo with page, path and Lightroom id"), ("Originals", "All photos of an edition copied into one folder, named by page"), (".billerbook", "The whole project with its photos, to move or archive")],
+  idml_h="Finish in Affinity or InDesign", idml_p="Some books need a last pass in a full layout program. The IDML export opens in Affinity (free, by Canva) and in InDesign with real image and text frames, the same crops and the photos in a Links folder. Background graphics, page numbers and the barcode stay in the print PDF.",
+  # AI
+  ai_title="Billerbook and AI assistants: Claude, ChatGPT, Codex and Cursor lay out photo books over MCP",
+  ai_desc="Billerbook's MCP server has 51 tools. Connect Claude Desktop, Codex or Cursor locally, or ChatGPT and claude.ai with a pairing code. The assistant reads print shop data sheets, lays out the book and checks every spread.",
+  ai_h1="Ask your assistant to build the book.", ai_lead="Billerbook includes an MCP server with 51 tools. The assistant works on the same project you see in the app, and the app updates while it works.",
+  ai_can_h="What it can do", ai_can_h2="And what you check.",
+  ai_can=[("Set up the print", "Read a print shop's data sheet, apply it to the edition and save it as a profile; import a cover template."), ("Lay out", "Fill pages, apply a template, place and crop photos, write captions, set the cover."),
+          ("Look at its own work", "See each spread as an image and the whole book as a contact sheet, then fix what looks wrong."), ("Check and export", "Run preflight and soft proof, export print PDFs, the proof, IDML or an HTML book.")],
+  ai_local_h="On your Mac", ai_local_p="Claude Desktop, Claude Code, Codex, Cursor and LM Studio start Billerbook's MCP server themselves. Connect AI in the app writes the entry into Claude Desktop with one click; this is what it adds:",
+  ai_remote_h="ChatGPT and claude.ai", ai_remote_p="Assistants in the cloud need a public address that leads to your Mac. Connect AI starts a tunnel, you add the address as a connector, and you confirm with a six-digit code from the app. The code works once and for ten minutes.",
+  ai_remote_list=[("No file paths", "A remote assistant gets no tools that take paths on your Mac: no folders, catalogs, fonts or export folders."), ("Signed in with OAuth 2.1", "PKCE, tokens stored as hashes, refresh tokens rotate on every use."), ("Disconnect", "One click in the app removes a client and its tokens.")],
+  ai_prompts_h="Things to ask",
+  ai_prompts=["Here is the data sheet from my print shop. Set up the hardcover exactly like that and tell me which values you took from where.",
+              "Make a photo book from ~/Pictures/Summer 2026. Landscape hardcover A4, five-star photos get their own page. Look at every spread and fix anything that looks unbalanced.",
+              "In my project Year 2026, make a portrait softcover for the family with only the four- and five-star photos, at most 60 pages.",
+              "Look at the whole book. Which layouts repeat too often, and where does a chapter not start on a right page?",
+              "Turn Year 2026 into a Christmas year review, check it in soft proof and export the print PDFs."],
+  ai_docs="Full tool list and setup in the MCP documentation",
+ ),
+ "de": dict(
+  nav=[("how", "So funktioniert's"), ("ai", "KI"), ("shops", "Druckereien"), ("sc", "Beispielbuch")],
+  slug_how="so-funktionierts", slug_ai="ki",
+  h1="Am Mac gestalten. <em>Überall drucken.</em>",
+  lede="Billerbook ist ein kostenloser Fotobuch-Editor für den Mac. Ordner, Lightroom-Sammlung oder Capture-One-Album reinziehen, mit der Leertaste durch Layouts blättern und das PDF exportieren, das deine Druckerei verlangt: mit Beschnitt, Buchrücken und Umschlag. <b>Ohne Konto, und deine Fotos bleiben auf dem Mac.</b>",
+  who="Für Fotografinnen und Fotografen, Familien mit Jahresbuch, Vereine mit Heft und alle, die schon einmal ein Druck-PDF in InDesign repariert haben.",
+  cta2="So entsteht ein Buch",
+  sheet_top="Botanical Stories", sheet_sub="Hardcover · A4 quer", sheet_tag="Doppelseite 2–3",
+  sheet_cap=("Endformat 297 × 210 mm", "PDF-Seite 303 × 216 mm"),
+  sheet_h="Bereit für die Druckerei",
+  sheet_rows=[("Beschnitt", "3 mm an jedem Außenrand", "ok", "OK"), ("Umschlag", "645 × 245 mm, Rücken 11 mm bei 170 Seiten", "ok", "Berechnet"),
+              ("Farbe", "CMYK, im Softproof geprüft", "ok", "OK"), ("Klebezone", "Kein Text in 7 mm am Bund", "", "Geprüft")],
+  sheet_keys="Leertaste nächstes Layout · F füllen oder ganz · V randlos",
+  toast1="Doppelseite 14: zwei Horizonte jetzt randlos nebeneinander", toast2="Prüfung sauber · 170 Seiten",
+  specs_lead="Schreibt die Dateien, die eine Druckerei verlangt.",
+  specs=[("Inhalt-PDF", "Endformat- und Beschnittrahmen, ICC-Profil"), ("Umschlag-PDF", "Rücken, Buchrücken und Vorderseite auf einem Bogen"), ("Prüf-PDF", "Hilfslinien und nummerierte Hinweise"), ("IDML", "Bearbeitbar in Affinity und InDesign"), ("HTML-Buch", "Dazu EPUB für E-Reader")],
+  state='<span class="hl">Das PDF, das deine Druckerei will,</span> kommt aus demselben Programm, in dem du das Buch gestaltest. Keine Reparaturrunde in InDesign <span class="hl">und kein Raten beim Buchrücken.</span>',
+  board_h="Zehn Druckereien, 208 Formate.", board_h2="Oder jede andere, über ihr Datenblatt.",
+  board_p="Im Druckprofil steht, was sich zwischen Druckereien unterscheidet: Beschnitt, Seitenregeln, Rücken und Umschlag. Die Tabelle zeigt, womit Billerbook heute arbeitet.",
+  board_bar="Druckprofile", board_q="Druckerei suchen",
+  board_cols=["Druckerei", "Bindungen", "Rücken aus", "Stand"],
+  thread_h="Eine Druckerei einrichten, die fehlt",
+  thread_p="Gib deinem Assistenten das Datenblatt der Druckerei. Er liest die Werte und richtet das Buch ein.",
+  thread=[("me", "Hier ist das Datenblatt von WIRmachenDRUCK. Richte das Hardcover so ein, wie es da steht.", "Du"),
+          ("them", "Endformat 210 × 297 mm, Datenformat 216 × 303, Beschnitt 3 mm, Sicherheitsabstand 5 mm, Klebezone 7 mm. Der Einschlag ist 15 mm, aus ihrer Umschlagformel berechnet.", "Claude, über Billerbook"),
+          ("sys", "Edition nach dem Datenblatt eingerichtet und als Druckprofil für diese Druckerei gespeichert.", ""),
+          ("me", "Und der Rücken?", "Du"),
+          ("them", "Im Datenblatt steht keine Rückentabelle. Ich habe den Wert aus ihrem Bestellformular genommen, prüf ihn dort bitte vor dem Hochladen.", "Claude")],
+  field_h="Fotos von dort, wo sie schon liegen.", field_h2="Ein Buch.",
+  tabs=[("lr", "Lightroom Classic"), ("c1", "Capture One"), ("folder", "Ein Ordner"), ("web", "Eine Webseite")],
+  panels={
+   "lr": ("Lightroom · Gewächshäuser", [("Lesen", "Katalog nur lesend geöffnet", "ok", "OK"), ("118", "Fotos aus zwei Sammlungen", "", "Bestand"), ("Exporte", "Dateien in voller Größe über den Namen zugeordnet", "ok", "118/118"), ("Buch", "Buch aus dem Buch-Modul übernommen, 24 Seiten", "", "Import")],
+          "Plug-in für Lightroom", "Zeigt, welche Fotos im Buch sind", "Eine Sammlung je Edition und eine mit den Fotos, die noch fehlen."),
+   "c1": ("Capture One · Album Botanik", [("Album", "Über AppleScript gelesen", "ok", "OK"), ("64", "Varianten im Album", "", "Bestand"), ("JPEG", "Verarbeitete Dateien über den Namen zugeordnet", "ok", "Zugeordnet"), ("RAW", "Wartet, bis es verarbeitet ist", "no", "Später")],
+          "Nur am Mac", "Capture One muss offen sein", "Billerbook liest nur. Die Bearbeitung bleibt in Capture One."),
+   "folder": ("~/Bilder/Island 2026", [("142", "JPEG, TIFF, PNG, WebP oder HEIC", "", "Bestand"), ("Datum", "Aufnahmezeit aus EXIF", "ok", "Sortiert"), ("Sterne", "Bewertungen aus XMP", "ok", "Gelesen"), ("Text", "Bildunterschriften aus IPTC", "ok", "Gelesen")],
+          "Kein Upload", "Nichts verlässt den Mac", "Originale bleiben unverändert. Tönungen und Ausschnitte stehen im Projekt."),
+   "web": ("tillheidrich.de · 22 Galerien", [("22", "Galerieseiten gelesen", "ok", "OK"), ("8", "Fotos je Garten, gleichmäßig verteilt", "", "Gewählt"), ("H1", "Titel wurden Kapitelseiten", "ok", "Kapitel"), ("Text", "Absätze wurden Textseiten", "", "Seiten")],
+          "So entstand das Beispielbuch", "Eine Website rein, ein Buch raus", "Botanical Stories kam in einem Import aus 22 Galerien."),
+  },
+  notes=[("Mehrere Editionen.", "Ein großes Hardcover quer und ein kurzes Softcover hochkant aus denselben Fotos."), ("Kluge Ausschnitte.", "Billerbook findet das Motiv jedes Fotos und schneidet darum herum zu."), ("Bildunterschriften.", "Aus den Metadaten der Fotos, auf der Seite änderbar."), ("Deine Schriften.", "Neun freie Schriften eingebaut, eigene TTF oder OTF dazu.")],
+  steps_h="Vom Ordner zur Druckerei", steps_h2="an einem Nachmittag.",
+  steps_cta="Billerbook laden",
+  steps=[("Fotos holen.", "Ein Ordner, eine Lightroom-Sammlung, ein Capture-One-Album oder eine Webseite."), ("Druckerei wählen.", "Format, Papier und Bindung; der Rücken folgt aus der Seitenzahl."),
+         ("Gestalten.", "Automatisch oder mit einer Vorlage, dann die Leertaste für Alternativen."), ("Prüfen.", "Preflight, Softproof und das ganze Buch auf einem Bogen."), ("Exportieren und hochladen.", "Inhalt und Umschlag so, wie die Druckerei sie will.")],
+  exp_seg=["Druck", "Prüfen", "Teilen", "Weiterbearbeiten"],
+  exp_fields=[("Edition", "Hardcover · 170 Seiten"), ("Druckerei", "WIRmachenDRUCK · A4 quer")],
+  exp_label="Dateien", exp_chk=[("Inhalt-PDF", True), ("Umschlag-PDF", True), ("Prüf-PDF", True), ("Seitenübersicht", True), ("IDML für Affinity", False), ("HTML-Buch", False)],
+  exp_pages=("Seiten", "Alle, oder z. B. 1–12, 40"), exp_foot=("4 Dateien auf den Schreibtisch", "Exportieren"),
+  keys_h="Gestalten im Tastentakt.", keys_h2="Was sonst zäh ist, ist hier ein Tastendruck.",
+  keys=[("Leertaste", "Nächste Anordnung der Fotos auf der Seite"), ("F", "Rahmen füllen oder ganzes Foto zeigen"), ("V", "Das Foto als randlose Seite"), ("1–9", "Ein Layout mit so vielen Fotos"), ("⌘D", "Seite duplizieren"), ("⇧⌘C ⇧⌘V", "Layout kopieren und auf andere Seiten setzen")],
+  show_h="Das ganze Buch auf einen Blick.", show_h2="Dann drucken.",
+  show_p="Die Übersicht zeigt alle Doppelseiten auf einmal. Wiederholte Layouts und ein holpriger Rhythmus fallen auf, bevor du bestellst. Derselbe Bogen geht als PDF zur Freigabe raus, und dein Assistent sieht ihn auch.",
+  show_cta="Durch Botanical Stories blättern", show_cap="Botanical Stories, Doppelseiten 1 bis 47 in der Seitenübersicht",
+  off_h="Kein Konto, kein Upload.", off_h2="Deine Fotos bleiben auf dem Mac.",
+  off_p="Billerbook läuft auf deinem Mac. Es liest die Fotos dort, wo sie liegen, und schreibt die PDFs daneben. Ein KI-Assistent in der Cloud verbindet sich erst, wenn du einen sechsstelligen Code aus der App eintippst, und bekommt keine Dateipfade.",
+  off_svg=dict(photos="Deine Fotos", photos2="Ordner, Lightroom, Capture One", app="Billerbook", app2="auf deinem Mac", pdf="Druck-PDFs", pdf2="Inhalt und Umschlag", shop="Druckerei", shop2="Du lädst hoch", ai="KI-Assistent", ai2="Sechsstelliger Code, keine Pfade"),
+  story_h="Warum es das gibt",
+  log_h="Was neu ist", log_sub="Die letzten Versionen. Jede steht mit Download auf GitHub.",
+  log=[("0.11.1", "Korrekturen aus einer unabhängigen Sicherheitsprüfung der neuen Import- und Exportwege.", "2026-11-22"),
+       ("0.11.0", "208 Formate, Magazine, Einrichtung per Datenblatt, Vorlagen und Schriften, IDML für Affinity und InDesign, Capture One, Seitenübersicht, ChatGPT und claude.ai über OAuth.", "2026-11-22"),
+       ("0.10.0", "Druckereien weltweit, Export als Doppelseiten, Umschlagvorlagen, das Lightroom-Plug-in und die Seitenwerkzeuge des Buch-Moduls.", "2026-11-21")],
+  faq_h="Fragen",
+  end_h="Fotos aussuchen.", end_u="Buch drucken.",
+  foot_about="Ein kostenloser Fotobuch-Editor für den Mac, gebaut von Till Heidrich in Tostedt. Open Source unter der AGPL-3.0.",
+  foot_cols=[("Produkt", [("how", "So funktioniert's"), ("ai", "KI-Assistenten"), ("shops", "Druckereien"), ("sc", "Beispielbuch")]),
+             ("Mehr", [("gh", "Quellcode"), ("rel", "Alle Versionen"), ("mcp", "MCP-Dokumentation"), ("llms", "llms.txt")]),
+             ("Rechtliches", [("imp", "Impressum"), ("priv", "Datenschutz"), ("other", "English")])],
+  foot_base="Billerbook gehört zu keiner der genannten Druckereien.",
+  menu="Menü",
+  how_title="So funktioniert Billerbook: von den Fotos zum druckfertigen PDF",
+  how_desc="Fotos aus Ordnern, Lightroom Classic oder Capture One, Layouts und Vorlagen, Editionen, Tastatur, Umschlag und Rücken, Prüfung, Softproof und jeder Export, den Billerbook schreibt.",
+  how_h1="So entsteht ein Buch.", how_lead="Vom Fotoordner bis zu den Dateien, die deine Druckerei verlangt, in der Reihenfolge, in der du arbeitest.",
+  how_blocks=[
+   ("Fotos rein", "Von dort, wo sie liegen.", "Billerbook liest die Fotos dort, wo du sie aufbewahrst, und verändert die Originale nie.",
+    [("Jeder Ordner", "JPEG, TIFF, PNG, WebP, HEIC; Datum, Sterne und Bildunterschriften aus den Metadaten."), ("Lightroom Classic", "Sammlungen als Bestand, Vorschauen zum Gestalten, Exporte in voller Größe für den Druck. Bücher aus dem Buch-Modul kommen mit ihren Seiten."), ("Capture One", "Alben, Projekte und Gruppen aus dem offenen Katalog oder der Session; verarbeitete Dateien werden über den Namen zugeordnet."), ("Webseiten und PDFs", "Eine Galerieseite oder HTML-Datei wird zu Kapiteln und Tafeln, ein PDF zu Seiten.")]),
+   ("Layouts und Vorlagen", "Mit einem Stil anfangen.", "Sieben Vorlagen setzen Schriften, Farben, Umschlag und Seitenfolge: Bildband, Jahresband, Galerie, Botanik, Reisetagebuch, Hochzeit und Jahresrückblick zu Weihnachten. Danach gehört jede Seite dir.",
+    [("Fotobuch-Layouts", "Tafeln im Satzspiegel nach Van de Graaf, Kapitelseiten, Textseiten, Diptychen und randlose Doppelseiten."), ("Freie Rahmen", "Rahmen in Millimetern verschieben und skalieren, mit Einrasten an Dritteln und am Satzspiegel."), ("Eigene Layouts", "Eine Seite als Layout speichern und auf jede Seite mit gleich vielen Fotos setzen."), ("Tönungen und Grafiken", "Schwarzweiß, vier Tönungen, Papierstrukturen und Hintergrundgrafiken.")]),
+   ("Editionen", "Mehrere Bücher aus denselben Fotos.", "Ein ausführliches Hardcover quer für dich und ein kürzeres Softcover hochkant für die Familie teilen sich die Fotos. Jede Edition hat ihre eigene Druckerei, ihr Format und ihre Seitenzahl, und die Layouts passen sich beim Formatwechsel an.", None),
+   ("Umschlag und Rücken", "Aus der Seitenzahl berechnet.", "Der Umschlag folgt aus Seitenzahl und Papier: Rückenbreite aus der Formel oder Tabelle der Druckerei, Einschlag und Falz aus dem Profil, oder exakt aus der Umschlagvorlage, die du bei der Druckerei lädst. ISBN-Barcodes werden als Vektoren gezeichnet.", None),
+   ("Prüfen vor der Bestellung", "Drei Blicke aufs Buch.", "Die Prüfung listet, was eine Druckerei ablehnen würde. Der Softproof zeigt die Farben nach der CMYK-Umrechnung der Druckerei und markiert, was kippt. Die Seitenübersicht legt alle Doppelseiten auf einen Bogen.",
+    [("Prüfung", "Geringe Auflösung, Text in der Klebezone, Seitengrenzen, Text, der nicht passt, kleine Schrift, Barcode-Regeln."), ("Softproof", "Das ICC-Profil der Druckerei auf dem Bildschirm, mit Warnung für Farben außerhalb des Farbraums."), ("Prüf-PDF", "Endformat, Sicherheitsabstand und Klebezone eingezeichnet, alle Hinweise nummeriert auf Seite 1."), ("Seitenübersicht", "Alle Doppelseiten auf A4-Bögen mit Seitenzahlen, Umschlag zuerst.")]),
+  ],
+  exports_h="Jede Datei, die Billerbook schreibt", exports_cols=["Export", "Was du bekommst"],
+  exports=[("Inhalt-PDF", "Einzelseiten oder Doppelseiten, Endformat- und Beschnittrahmen, CMYK mit ICC-Profil oder sRGB, Text in Pfaden"), ("Umschlag-PDF", "Rücken, Buchrücken und Vorderseite auf einem Bogen; bei Heften ein vierseitiger Umschlag"), ("Prüf-PDF", "Hilfslinien und nummerierte Prüfhinweise"), ("Seitenübersicht als PDF", "Alle Doppelseiten auf A4-Querbögen mit Seitenzahlen"),
+           ("IDML", "Bearbeitbares Layout für Affinity (kostenlos) und InDesign, Fotos im Ordner Links"), ("Bildschirm-PDF", "Kleine RGB-Datei der Doppelseiten"), ("HTML-Buch", "Interaktives Buch für deine Website, auf dem Handy Seite für Seite"), ("EPUB", "Festes Layout für E-Reader"),
+           ("Bilder", "Seiten oder Doppelseiten als JPEG oder PNG; Instagram-Karussell in 1080 × 1350"), ("Dateiliste", "CSV und TXT aller Fotos mit Seite, Pfad und Lightroom-ID"), ("Originale", "Alle Fotos einer Edition in einem Ordner, nach Seite benannt"), (".billerbook", "Das ganze Projekt mit Fotos, zum Umziehen oder Archivieren")],
+  idml_h="In Affinity oder InDesign fertig machen", idml_p="Manche Bücher brauchen einen letzten Durchgang in einem großen Layoutprogramm. Der IDML-Export öffnet in Affinity (kostenlos, von Canva) und in InDesign mit echten Bild- und Textrahmen, denselben Ausschnitten und den Fotos im Ordner Links. Hintergrundgrafiken, Seitenzahlen und Barcode bleiben im Druck-PDF.",
+  ai_title="Billerbook und KI-Assistenten: Claude, ChatGPT, Codex und Cursor gestalten Fotobücher über MCP",
+  ai_desc="Der MCP-Server von Billerbook hat 51 Werkzeuge. Claude Desktop, Codex oder Cursor verbinden sich lokal, ChatGPT und claude.ai mit einem Kopplungscode. Der Assistent liest Datenblätter von Druckereien, gestaltet das Buch und prüft jede Doppelseite.",
+  ai_h1="Lass deinen Assistenten das Buch bauen.", ai_lead="Billerbook bringt einen MCP-Server mit 51 Werkzeugen mit. Der Assistent arbeitet im selben Projekt, das du in der App siehst, und die App aktualisiert sich, während er arbeitet.",
+  ai_can_h="Was er kann", ai_can_h2="Und was du prüfst.",
+  ai_can=[("Den Druck einrichten", "Das Datenblatt einer Druckerei lesen, auf die Edition anwenden und als Profil speichern; eine Umschlagvorlage importieren."), ("Gestalten", "Seiten füllen, eine Vorlage anwenden, Fotos setzen und zuschneiden, Bildunterschriften schreiben, den Umschlag setzen."),
+          ("Die eigene Arbeit ansehen", "Jede Doppelseite als Bild und das ganze Buch als Kontaktbogen sehen und korrigieren, was nicht stimmt."), ("Prüfen und exportieren", "Prüfung und Softproof laufen lassen, Druck-PDFs, Prüf-PDF, IDML oder ein HTML-Buch exportieren.")],
+  ai_local_h="Auf deinem Mac", ai_local_p="Claude Desktop, Claude Code, Codex, Cursor und LM Studio starten den MCP-Server von Billerbook selbst. „KI verbinden“ in der App trägt ihn mit einem Klick in Claude Desktop ein; das ist der Eintrag:",
+  ai_remote_h="ChatGPT und claude.ai", ai_remote_p="Assistenten in der Cloud brauchen eine öffentliche Adresse, die zu deinem Mac führt. „KI verbinden“ startet einen Tunnel, du trägst die Adresse als Connector ein und bestätigst mit einem sechsstelligen Code aus der App. Der Code gilt einmal und zehn Minuten.",
+  ai_remote_list=[("Keine Dateipfade", "Ein Assistent aus der Cloud bekommt keine Werkzeuge, die Pfade auf deinem Mac nehmen: keine Ordner, Kataloge, Schriften oder Exportordner."), ("Anmeldung mit OAuth 2.1", "PKCE, Tokens nur als Hash gespeichert, Refresh-Tokens wechseln bei jeder Nutzung."), ("Trennen", "Ein Klick in der App entfernt einen Client mit seinen Tokens.")],
+  ai_prompts_h="Was du fragen kannst",
+  ai_prompts=["Hier ist das Datenblatt meiner Druckerei. Richte das Hardcover genau so ein und sag mir, welchen Wert du woher hast.",
+              "Mach ein Fotobuch aus ~/Bilder/Sommer 2026. Hardcover A4 quer, Fünf-Sterne-Fotos bekommen eine eigene Seite. Sieh dir jede Doppelseite an und korrigier, was unausgewogen wirkt.",
+              "Mach in meinem Projekt Jahr 2026 ein Softcover hochkant für die Familie, nur mit den Vier- und Fünf-Sterne-Fotos, höchstens 60 Seiten.",
+              "Sieh dir das ganze Buch an. Welche Layouts wiederholen sich zu oft, und wo beginnt ein Kapitel nicht auf einer rechten Seite?",
+              "Mach aus Jahr 2026 einen Jahresrückblick zu Weihnachten, prüf ihn im Softproof und exportier die Druck-PDFs."],
+  ai_docs="Alle Werkzeuge und die Einrichtung in der MCP-Dokumentation",
+ ),
+}
+
+
+# ---------- Rendering (Benchkey layout) ----------
+MCP_DOC = REPO + "/blob/main/docs/mcp.md"
+LOGO = '<img src="{root}assets/img/icon.png" alt="" width="22" height="22">'
+
+def urls(t, root):
+    k = K[t['lang']]
+    p = root + t['path']
+    return {"home": p or "./", "how": f"{p}{k['slug_how']}/", "ai": f"{p}{k['slug_ai']}/", "shops": f"{p}{t['shops_slug']}/", "sc": f"{p}{t['sc_slug']}/",
+            "imp": f"{p}impressum.html", "priv": f"{p}datenschutz.html", "gh": REPO, "rel": REPO + "/releases", "mcp": MCP_DOC, "llms": root + "llms.txt"}
+
+def alt_paths(page):
+    """English and German URL of the same page."""
+    en, de = K['en'], K['de']
+    m = {"home": ("", "de/"), "how": (en['slug_how'] + "/", "de/" + de['slug_how'] + "/"), "ai": (en['slug_ai'] + "/", "de/" + de['slug_ai'] + "/"),
+         "shops": ("print-shops/", "de/druckereien/"), "sc": ("botanical-stories/", "de/botanical-stories/"),
+         "imp": ("impressum.html", "de/impressum.html"), "priv": ("datenschutz.html", "de/datenschutz.html")}
+    return m[page]
+
+def pill(t, root, cur):
+    k = K[t['lang']]; u = urls(t, root)
+    other_lang = 'de' if t['lang'] == 'en' else 'en'
+    en_p, de_p = alt_paths(cur)
+    other_href = root + (de_p if t['lang'] == 'en' else en_p)
+    links = "".join(f'<a href="{u[i]}"{" aria-current=\"page\"" if i == cur else ""}>{esc(n)}</a>' for i, n in k['nav'])
+    mlinks = "".join(f'<a href="{u[i]}">{esc(n)}</a>' for i, n in k['nav'])
+    return f"""<a class="skip" href="#main">{'Skip to content' if t['lang'] == 'en' else 'Zum Inhalt'}</a>
+<header class="pill">
+ <a class="mark" href="{u['home']}" aria-label="Billerbook">{LOGO.format(root=root)}<span>Billerbook</span></a>
+ <nav aria-label="{'Main' if t['lang'] == 'en' else 'Hauptnavigation'}">{links}</nav>
+ <span class="sep" aria-hidden="true"></span>
+ <a class="lang" href="{other_href}" hreflang="{other_lang}" lang="{other_lang}">{t['other_short']}</a>
+ <a class="btn go" href="{DL}">{esc(t['dl_short'])}</a>
+ <details class="menu"><summary aria-label="{k['menu']}"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6"/></svg></summary><div>{mlinks}<a href="{DL}">{esc(t['dl'])}</a><a href="{other_href}" hreflang="{other_lang}" lang="{other_lang}">{t['other_label']}</a></div></details>
+</header>
+<div class="frame">"""
+
+def foot(t, root, cur):
+    k = K[t['lang']]; u = urls(t, root)
+    en_p, de_p = alt_paths(cur)
+    u["other"] = root + (de_p if t['lang'] == 'en' else en_p)
+    cols = "".join(f'<div><h2>{esc(h)}</h2><ul>{"".join(f"<li><a href=\"{u[i]}\">{esc(n)}</a></li>" for i, n in items)}</ul></div>' for h, items in k['foot_cols'])
+    return f"""<footer>
+ <div class="cols">
+  <div><a class="mark" href="{u['home']}" style="display:inline-flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);font-weight:500">{LOGO.format(root=root)}Billerbook</a><p style="max-width:300px;margin:12px 0 0">{esc(k['foot_about'])}</p></div>
+  {cols}
+ </div>
+ <div class="base"><span>{esc(k['foot_base'])}</span><span>Version {VERSION}</span></div>
+</footer>
+</div>
+<script>
+(()=>{{for(const t of document.querySelectorAll('.tabs')){{const b=[...t.querySelectorAll('button')];const p=b.map(x=>document.getElementById(x.getAttribute('aria-controls')));
+b.forEach((x,i)=>{{x.addEventListener('click',()=>{{b.forEach((y,j)=>{{y.setAttribute('aria-selected',i===j);y.tabIndex=i===j?0:-1;p[j].hidden=i!==j}})}});
+x.addEventListener('keydown',e=>{{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;const n=(i+(e.key==='ArrowRight'?1:b.length-1))%b.length;b[n].click();b[n].focus()}})}});
+t.hidden=false;p.forEach((x,j)=>x.hidden=j!==0)}}}})();
+addEventListener('message',e=>{{const f=[...document.querySelectorAll('.bookframe iframe')].find(x=>x.contentWindow===e.source);if(f&&e.origin===location.origin&&e.data&&e.data.billerbook==='height'&&e.data.h>0){{f.style.aspectRatio='auto';f.style.height=e.data.h+'px'}}}});
+</script>
+</body></html>"""
+
+def head2(t, title, desc, page, root, ld=None, og="og.jpg"):
+    en_p, de_p = alt_paths(page)
+    canonical = BASE + (de_p if t['lang'] == 'de' else en_p)
+    return f"""<!doctype html>
+<html lang="{t['lang']}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)}</title>
+<meta name="description" content="{esc(desc)}">
+<link rel="canonical" href="{canonical}">
+<link rel="alternate" hreflang="en" href="{BASE + en_p}">
+<link rel="alternate" hreflang="de" href="{BASE + de_p}">
+<link rel="alternate" hreflang="x-default" href="{BASE + en_p}">
+<meta name="theme-color" content="#f7f6f2">
+<meta property="og:title" content="{esc(title)}">
+<meta property="og:description" content="{esc(desc)}">
+<meta property="og:image" content="{BASE}assets/img/{og}">
+<meta property="og:url" content="{canonical}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="{root}assets/img/favicon.png">
+<link rel="apple-touch-icon" href="{root}assets/img/apple-touch-icon.png">
+<link rel="preload" href="{root}assets/fonts/geist-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{root}assets/site.css">
+{"".join('<script type="application/ld+json">' + _json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + '</script>' for x in (ld or []))}
+</head>
+<body>"""
+
+def sh(a, b, cls="", tag="h2", id_=""):
+    return f'<{tag} class="sh {cls}"{f" id={chr(34)}{id_}{chr(34)}" if id_ else ""}>{esc(a)}<span>{esc(b)}</span></{tag}>'
+
+def st(kind, label):
+    return f'<span class="st{" " + kind if kind else ""}">{esc(label)}</span>'
+
+def ends(t, root, k):
+    return f"""<section class="end" data-section="cta" aria-labelledby="eh">
+ <div class="cells" aria-hidden="true"></div>
+ <div class="wrap" style="position:relative">
+  <h2 id="eh">{esc(k['end_h'])}<br><span class="u">{esc(k['end_u'])}<svg viewBox="0 0 420 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9C90 3 220 2 418 8" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg></span></h2>
+  <div class="ctas"><a class="btn go" href="{DL}">{esc(t['dl'])} <span class="ar" aria-hidden="true">&rarr;</span></a><a class="btn ghost" href="{REPO}">{esc(t['gh'])}</a></div>
+  <p class="meta" style="color:var(--soft);font-size:13px;margin-top:18px">{esc(t['meta'])}</p>
+ </div>
+</section>"""
+
+def home(t):
+    root = "../" if t["path"] else ""
+    k = K[t['lang']]; u = urls(t, root); en = t['lang'] == 'en'
+    rows = "".join(f'<li><span>{esc(a)}<small>{esc(b)}</small></span>{st(c, d)}</li>' for a, b, c, d in k['sheet_rows'])
+    specs = "".join(f'<div><b>{esc(a)}</b>{esc(b)}</div>' for a, b in k['specs'])
+    # print shop table from the real profile data
+    trs = []
+    for shp in [s for s in SHOPS if s['id'] not in ('custom',)][:8]:
+        bs = shp['bindings']
+        binds = ", ".join(BIND[t['lang']].get(b, b).split(' / ')[0].split(' (')[0] for b in bs)
+        spines = sorted({shop_spine(b) for b in bs.values()})
+        stat = 'verified' if all(b['status'] == 'verified' for b in bs.values()) else ('partial' if any(b['status'] != 'manual' for b in bs.values()) else 'manual')
+        trs.append(f'<tr><td>{esc(shp["name"])}<small>{esc(shp["region"])}</small></td><td>{esc(binds)}</td><td>{esc(" / ".join(t["spine_names"][x] for x in spines))}</td><td>{st("ok" if stat == "verified" else "", t["status_names"][stat].split(",")[0])}</td></tr>')
+    thread = "".join(f'<p class="msg {w}">{esc(x)}{f"<small>{esc(by)}</small>" if by else ""}</p>' for w, x, by in k['thread'])
+    imgs = {"lr": "k-lr", "c1": "k-c1", "folder": "k-folder", "web": "k-web"}
+    tabs = "".join(f'<button role="tab" id="t-{i}" aria-controls="p-{i}" aria-selected="{"true" if n == 0 else "false"}"{" tabindex=\"-1\"" if n else ""}>{esc(lab)}</button>' for n, (i, lab) in enumerate(k['tabs']))
+    panels = []
+    for i, _ in k['tabs']:
+        bar, feed, c1, c2, c3 = k['panels'][i]
+        lis = "".join(f'<li><time>{esc(a)}</time><span>{esc(b)}</span>{st(c, d)}</li>' for a, b, c, d in feed)
+        panels.append(f'''<div class="panel" id="p-{i}" role="tabpanel" aria-labelledby="t-{i}">
+   <div class="bay"><img src="{root}assets/img/{imgs[i]}-1440.webp" srcset="{root}assets/img/{imgs[i]}-800.webp 800w, {root}assets/img/{imgs[i]}-1440.webp 1200w" sizes="(max-width:860px) 100vw, 1216px" width="1200" height="848" alt="" loading="lazy">
+    <div class="feed"><div class="bar"><strong>{esc(bar)}</strong>{st("ok", "OK")}</div><ol>{lis}</ol></div>
+    <div class="lock-card"><small>{esc(c1)}</small><b>{esc(c2)}</b><small>{esc(c3)}</small></div></div></div>''')
+    notes = "".join(f'<p><b>{esc(a)}</b> {esc(b)}</p>' for a, b in k['notes'])
+    steps = "".join(f'<li{" class=\"on\"" if n == 0 else ""}><b>{esc(a)}</b> {esc(b)}</li>' for n, (a, b) in enumerate(k['steps']))
+    seg = "".join(f'<span{" class=\"on\"" if n == 0 else ""}>{esc(s)}</span>' for n, s in enumerate(k['exp_seg']))
+    flds = "".join(f'<label>{esc(a)}</label><div class="fld"><span>{esc(b)}</span><span aria-hidden="true">&#8964;</span></div>' for a, b in k['exp_fields'])
+    chk = "".join(f'<span{" class=\"on\"" if on else ""}>{esc(a)}</span>' for a, on in k['exp_chk'])
+    keys = "".join(f'<div><kbd>{esc(a)}</kbd><span>{esc(b)}</span></div>' for a, b in k['keys'])
+    o = k['off_svg']
+    log = "".join(f'<article><h3>Billerbook {esc(v)}</h3><p>{esc(x)}</p><time datetime="{d}">{d}</time></article>' for v, x, d in k['log'])
+    faq = "".join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q, a in t['faq'])
+    story = "".join(f'<p>{p}</p>' for p in t['story'])
+    out = [head2(t, t['title'], t['desc'], "home", root, ld=app_ld(t, BASE + t['path'])), pill(t, root, "home")]
+    out.append(f"""<main id="main">
+<section class="hero" data-section="hero" aria-labelledby="h">
+ <div class="cells" aria-hidden="true"></div>
+ <div class="wrap">
+  <div>
+   <h1 id="h">{k['h1']}</h1>
+   <p class="lede">{k['lede']}</p>
+   <p class="who">{esc(k['who'])}</p>
+   <div class="ctas"><a class="btn go" href="{DL}">{esc(t['dl'])} <span class="ar" aria-hidden="true">&rarr;</span></a><a class="btn ghost" href="{u['how']}">{esc(k['cta2'])}</a></div>
+   <p class="meta">{esc(t['meta'])}</p>
+  </div>
+  <div class="stage">
+   <span class="ring" aria-hidden="true"></span>
+   <div class="sheet" role="group" aria-label="{'Sample spread with its print data' if en else 'Beispiel-Doppelseite mit Druckdaten'}">
+    <div class="top"><span><b>{esc(k['sheet_top'])}</b><br><small>{esc(k['sheet_sub'])}</small></span><small>{esc(k['sheet_tag'])}</small></div>
+    <div class="spread"><img src="{root}assets/img/k-hero-spread.webp" width="1200" height="424" alt="{'Opening spread of Botanical Stories: the Greifswald Botanic Garden glasshouses' if en else 'Auftakt von Botanical Stories: die Gewächshäuser des Botanischen Gartens Greifswald'}"><i></i><i></i><i></i><i></i></div>
+    <div class="cap"><span>{esc(k['sheet_cap'][0])}</span><span>{esc(k['sheet_cap'][1])}</span></div>
+    <div class="body"><h2>{esc(k['sheet_h'])}</h2><ul class="mach">{rows}</ul>
+     <div class="keys"><kbd>{'Space' if en else 'Leertaste'}</kbd><kbd>F</kbd><kbd>V</kbd><span>{esc(k['sheet_keys'].split(' · ')[0].split(' ', 1)[1] if ' ' in k['sheet_keys'] else '')}</span></div></div>
+   </div>
+   <p class="toast" role="status"><i aria-hidden="true"></i>{esc(k['toast1'])}</p>
+   <p class="toast b"><i aria-hidden="true"></i>{esc(k['toast2'])}</p>
+  </div>
+ </div>
+</section>
+
+<section class="specs" data-section="exports" aria-label="{esc(k['specs_lead'])}">
+ <div>{esc(k['specs_lead'])}</div>{specs}
+</section>
+
+<section class="state" data-section="statement"><div class="wrap"><p>{k['state']}</p></div></section>
+
+<section class="board" data-section="print-shops" aria-labelledby="bh">
+ <div>
+  <div class="intro">{sh(k['board_h'], k['board_h2'], id_="bh")}<p>{esc(k['board_p'])}</p></div>
+  <div class="ui" role="group" aria-label="{esc(k['board_bar'])}">
+   <div class="bar"><strong>{esc(k['board_bar'])}</strong><a class="q" href="{u['shops']}" style="text-decoration:none"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor"/><path d="m9.5 9.5 3 3" stroke="currentColor"/></svg>{esc(k['board_q'])}</a></div>
+   <table class="mt"><caption class="vh">{esc(k['board_bar'])}</caption>
+    <thead><tr>{"".join(f'<th scope="col">{esc(c)}</th>' for c in k['board_cols'])}</tr></thead>
+    <tbody>{"".join(trs)}</tbody></table>
+  </div>
+  <p style="margin:18px 0 0"><a href="{u['shops']}">{esc(t['shops_more'])}</a></p>
+ </div>
+ <div class="thread"><h3>{esc(k['thread_h'])}</h3><p>{esc(k['thread_p'])}</p>{thread}</div>
+</section>
+
+<section class="field" data-section="sources" aria-labelledby="fh">
+ <div class="wrap">
+  {sh(k['field_h'], k['field_h2'], id_="fh")}
+  <div class="tabs" role="tablist" aria-label="{'Photo sources' if en else 'Bildquellen'}" hidden>{tabs}</div>
+  {"".join(panels)}
+  <div class="notes">{notes}</div>
+ </div>
+</section>
+
+<section class="steps" data-section="workflow" aria-labelledby="sh">
+ <div>
+  {sh(k['steps_h'], k['steps_h2'], "acc", id_="sh")}
+  <div class="ctas"><a class="btn go" href="{DL}">{esc(k['steps_cta'])}</a></div>
+  <ol>{steps}</ol>
+ </div>
+ <div>
+  <div class="ui tb" role="group" aria-label="{'Export dialog (sample)' if en else 'Export-Dialog (Beispiel)'}">
+   <div class="seg">{seg}</div>
+   <div class="form">{flds}<label>{esc(k['exp_label'])}</label><div class="chk">{chk}</div><label>{esc(k['exp_pages'][0])}</label><div class="fld"><span>{esc(k['exp_pages'][1])}</span></div></div>
+   <div class="foot"><span>{esc(k['exp_foot'][0])}</span><b>{esc(k['exp_foot'][1])}</b></div>
+  </div>
+ </div>
+</section>
+
+<section class="block" data-section="keys" aria-labelledby="kh">
+ {sh(k['keys_h'], k['keys_h2'], id_="kh")}
+ <div class="keys-grid">{keys}</div>
+</section>
+
+<section class="show" data-section="overview" aria-labelledby="ovh">
+ <div>{sh(k['show_h'], k['show_h2'], "acc", id_="ovh")}<p>{esc(k['show_p'])}</p><a class="btn ghost" href="{u['sc']}">{esc(k['show_cta'])} <span class="ar" aria-hidden="true">&rarr;</span></a></div>
+ <div><figure class="ovfig"><img src="{root}assets/img/k-overview.webp" width="1600" height="771" alt="{esc(k['show_cap'])}" loading="lazy"><figcaption>{esc(k['show_cap'])}</figcaption></figure></div>
+</section>
+
+<section class="offline" data-section="local" aria-labelledby="oh">
+ <div>{sh(k['off_h'], k['off_h2'], id_="oh")}<p>{esc(k['off_p'])}</p></div>
+ <div>
+  <svg viewBox="0 0 560 380" role="img" aria-labelledby="dt"><title id="dt">{esc(k['off_h2'])}</title>
+   <g font-family="Geist,sans-serif" font-size="14" fill="var(--ink)">
+    <rect x="10" y="40" width="180" height="64" rx="10" fill="var(--white)" stroke="var(--line)"/><text x="100" y="68" text-anchor="middle">{esc(o['photos'])}</text><text x="100" y="88" text-anchor="middle" fill="var(--mute)" font-size="11">{esc(o['photos2'])}</text>
+    <rect x="205" y="140" width="150" height="76" rx="12" fill="var(--field)" stroke="var(--field)"/><text x="280" y="174" text-anchor="middle" fill="var(--on-field)" font-weight="500">{esc(o['app'])}</text><text x="280" y="194" text-anchor="middle" fill="var(--on-field-mute)" font-size="12">{esc(o['app2'])}</text>
+    <rect x="390" y="40" width="150" height="64" rx="10" fill="var(--white)" stroke="var(--line)"/><text x="465" y="68" text-anchor="middle">{esc(o['pdf'])}</text><text x="465" y="88" text-anchor="middle" fill="var(--mute)" font-size="12">{esc(o['pdf2'])}</text>
+    <rect x="390" y="270" width="150" height="64" rx="10" fill="var(--white)" stroke="var(--line)"/><text x="465" y="298" text-anchor="middle">{esc(o['shop'])}</text><text x="465" y="318" text-anchor="middle" fill="var(--mute)" font-size="12">{esc(o['shop2'])}</text>
+    <rect x="10" y="270" width="180" height="64" rx="10" fill="var(--white)" stroke="var(--accent)" stroke-dasharray="4 4"/><text x="100" y="298" text-anchor="middle">{esc(o['ai'])}</text><text x="100" y="318" text-anchor="middle" fill="var(--mute)" font-size="11">{esc(o['ai2'])}</text>
+   </g>
+   <path class="draw" d="M190 72h20q30 0 30 30v38M355 160q35 0 35-30V104M465 104v166" fill="none" stroke="var(--soft)"/>
+   <path d="M190 302h15q35 0 35-35v-51" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 5"/>
+   <g class="pulse" style="transform-origin:280px 178px"><circle cx="280" cy="178" r="96" fill="none" stroke="var(--line)" stroke-dasharray="2 6"/></g>
+  </svg>
+ </div>
+</section>
+
+<section class="log" data-section="story" aria-labelledby="sth">
+ <div><h2 class="sh" id="sth">{esc(k['story_h'])}</h2></div>
+ <div class="prose" style="padding-top:100px;padding-bottom:100px;max-width:none"><div style="max-width:620px">{story}</div></div>
+</section>
+
+<section class="log" id="releases" data-section="releases" aria-labelledby="lh">
+ <div><h2 class="sh" id="lh">{esc(k['log_h'])}</h2><p class="sub">{esc(k['log_sub'])}</p><p class="sub"><a href="{REPO}/releases">GitHub Releases</a></p></div>
+ <div>{log}</div>
+</section>
+
+<section class="block faq" id="faq" data-section="faq" aria-labelledby="qh">
+ <div class="split"><div><h2 class="sh" id="qh">{esc(k['faq_h'])}</h2></div><div>{faq}</div></div>
+</section>
+
+{ends(t, root, k)}
+</main>""")
+    out.append(foot(t, root, "home"))
+    return "\n".join(out)
+
+def ihead(h1, lead):
+    return f'<section class="ihead"><h1>{esc(h1)}</h1><p>{esc(lead)}</p></section>'
+
+def how_page(t):
+    root = "../../" if t["path"] else "../"
+    k = K[t['lang']]; en = t['lang'] == 'en'
+    out = [head2(t, k['how_title'], k['how_desc'], "how", root), pill(t, root, "how"), '<main id="main">', ihead(k['how_h1'], k['how_lead'])]
+    for n, (a, b, p, items) in enumerate(k['how_blocks']):
+        right = ''
+        if items:
+            right = '<ul class="ticks">' + "".join(f'<li><b>{esc(x)}.</b> {esc(y)}</li>' for x, y in items) + '</ul>'
+        elif n == 2:
+            right = f'<div style="display:grid;gap:8px"><figure class="proof"><span class="cm"></span><img src="{root}assets/img/hc-spread-1.webp" width="2000" height="707" alt="{"Landscape hardcover spread" if en else "Doppelseite Hardcover quer"}" loading="lazy"><figcaption>{t["ed_caps"][0]}</figcaption></figure><figure class="proof" style="max-width:70%"><span class="cm"></span><img src="{root}assets/img/sc-spread-2.webp" width="1400" height="990" alt="{"Portrait softcover spread with the same photos" if en else "Softcover-Doppelseite hochkant mit denselben Fotos"}" loading="lazy"><figcaption>{t["ed_caps"][1]}</figcaption></figure></div>'
+        elif n == 3:
+            right = f'<figure class="ovfig"><img src="{root}assets/img/app-cover.webp" width="2000" height="1250" alt="{"The cover editor with back, spine and front" if en else "Der Umschlag-Editor mit Rückseite, Buchrücken und Vorderseite"}" loading="lazy"></figure>'
+        out.append(f'<section class="block"><div class="split"><div><p class="kick">{n + 1:02d} · {esc(a)}</p>{sh(b, "", tag="h2")}<p>{esc(p)}</p></div><div>{right}</div></div></section>')
+        if n == 1:
+            keys = "".join(f'<div><kbd>{esc(x)}</kbd><span>{esc(y)}</span></div>' for x, y in k['keys'])
+            out.append(f'<section class="block">{sh(k["keys_h"], k["keys_h2"])}<div class="keys-grid">{keys}</div></section>')
+    rows = "".join(f'<tr><td>{esc(a)}</td><td>{esc(b)}</td></tr>' for a, b in k['exports'])
+    out.append(f'<section class="block"><div class="split"><div><p class="kick">{len(k["how_blocks"]) + 1:02d} · Export</p><h2 class="sh">{esc(k["exports_h"])}</h2></div><div><table class="xt"><thead><tr><th>{esc(k["exports_cols"][0])}</th><th>{esc(k["exports_cols"][1])}</th></tr></thead><tbody>{rows}</tbody></table></div></div></section>')
+    out.append(f'<section class="block"><div class="split"><div><p class="kick">{len(k["how_blocks"]) + 2:02d} · Affinity · InDesign</p><h2 class="sh">{esc(k["idml_h"])}</h2></div><div class="prose"><p>{esc(k["idml_p"])}</p></div></div></section>')
+    out.append(ends(t, root, k) + '</main>')
+    out.append(foot(t, root, "how"))
+    return "\n".join(out)
+
+def ai_page(t):
+    root = "../../" if t["path"] else "../"
+    k = K[t['lang']]
+    out = [head2(t, k['ai_title'], k['ai_desc'], "ai", root), pill(t, root, "ai"), '<main id="main">', ihead(k['ai_h1'], k['ai_lead'])]
+    can = '<ul class="ticks">' + "".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in k['ai_can']) + '</ul>'
+    out.append(f'<section class="block"><div class="split"><div>{sh(k["ai_can_h"], k["ai_can_h2"])}</div><div>{can}</div></div></section>')
+    thread = "".join(f'<p class="msg {w}">{esc(x)}{f"<small>{esc(by)}</small>" if by else ""}</p>' for w, x, by in k['thread'])
+    out.append(f'<section class="board" style="grid-template-columns:1fr 440px"><div><h2 class="sh">{esc(k["thread_h"])}</h2><p style="color:var(--mute);max-width:440px;margin:20px 0 0">{esc(k["thread_p"])}</p><figure class="ovfig" style="margin-top:36px"><img src="{"../" * (2 if t["path"] else 1)}assets/img/k-overview.webp" width="1600" height="771" alt="{esc(k["show_cap"])}" loading="lazy"><figcaption>view_overview · {esc(k["show_cap"])}</figcaption></figure></div><div class="thread">{thread}</div></section>')
+    cfg = esc('{\n  "mcpServers": {\n    "billerbook": {\n      "command": "/Applications/Billerbook.app/Contents/MacOS/Billerbook",\n      "args": ["/Applications/Billerbook.app/Contents/Resources/app/mcp.mjs"],\n      "env": { "ELECTRON_RUN_AS_NODE": "1" }\n    }\n  }\n}')
+    out.append(f'<section class="block"><div class="split"><div><h2 class="sh">{esc(k["ai_local_h"])}</h2><p>{esc(k["ai_local_p"])}</p></div><div><pre class="code">{cfg}</pre></div></div></section>')
+    rl = '<ul class="ticks">' + "".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in k['ai_remote_list']) + '</ul>'
+    out.append(f'<section class="block"><div class="split"><div><h2 class="sh">{esc(k["ai_remote_h"])}</h2><p>{esc(k["ai_remote_p"])}</p></div><div>{rl}</div></div></section>')
+    pr = "".join(f'<p>{esc(x)}</p>' for x in k['ai_prompts'])
+    out.append(f'<section class="block"><div class="split"><div><h2 class="sh">{esc(k["ai_prompts_h"])}</h2><p><a href="{MCP_DOC}">{esc(k["ai_docs"])}</a></p></div><div class="prompts">{pr}</div></div></section>')
+    out.append(ends(t, root, k) + '</main>')
+    out.append(foot(t, root, "ai"))
+    return "\n".join(out)
+
+def shops_page2(t):
+    root = "../../" if t["path"] else "../"
+    lang = t['lang']
+    out = [head2(t, t['shops_title'], t['shops_desc'], "shops", root, ld=shops_ld(t, BASE + t['path'] + t['shops_slug'] + '/')), pill(t, root, "shops"), '<main id="main">', ihead(t['shops_h1'], t['shops_intro'])]
+    for shp in SHOPS:
+        left = f'<div><h2>{esc(shp["name"])}</h2><p class="muted">{esc(shp["region"])}{" · <a href=\"" + esc(shp["url"]) + "\">" + esc(shp["url"].replace("https://", "")) + "</a>" if shp.get("url") else ""}</p><p class="muted">{esc(L(shp.get("notes") or {}, lang))}</p>'
+        src = ' '.join(f'<a href="{esc(x)}" rel="nofollow noopener">[{i + 1}]</a>' for i, x in enumerate(shp['sources']))
+        left += f'<p class="note">{esc(t["lbl_sources"])}: {src}<br>{esc(t["lbl_checked"])} {esc(shp.get("checked", ""))}</p></div>'
+        right = []
+        for kb, b in shp['bindings'].items():
+            cov = b['cover']
+            cover = f"{t['lbl_wrap']} {mm(cov['wrap'])}" + (f", {t['lbl_joint']} {mm(cov['joint'])}" if cov.get('joint') else '') + (f", {t['lbl_hinge']} {mm(cov['hinge'])}" if cov.get('hinge') else '')
+            pages = b.get('pages') or {}
+            pr = ' · '.join(x for x in [f"min {pages['min']}" if pages.get('min') else '', f"max {pages['max']}" if pages.get('max') else '', f"step {pages['step']}" if pages.get('step') else ''] if x) or '–'
+            papers = ', '.join(L(x['label'], lang) for x in b.get('papers', []))
+            rows = [(t['lbl_bleed'], mm(b['bleed'])), (t['lbl_safety'], mm(b['safety'])),
+                    (t['col'][2], t['interior_names'][b['interior']] + (f", {t['lbl_blank']}" if b.get('blankEnds') else '')),
+                    (t['lbl_pages'], pr), (t['lbl_colour'], 'sRGB' if b['colour'] == 'srgb' else 'CMYK'),
+                    (t['col'][3], t['spine_names'][shop_spine(b)]), (t['lbl_cover'], cover)]
+            if papers: rows.append((t['lbl_papers'], papers))
+            rows.append((t['lbl_formats'], ', '.join(L(f['label'], lang) for f in shp['formats'] if f['binding'] == kb)))
+            tag_cls = ' ok' if b['status'] == 'verified' else ''
+            right.append(f'<h3>{esc(BIND[lang].get(kb, kb.capitalize()))} <span class="tag{tag_cls}">{esc(t["status_names"].get(b["status"], b["status"]))}</span></h3><table class="xt"><tbody>' + ''.join(f'<tr><td>{esc(a)}</td><td>{esc(v)}</td></tr>' for a, v in rows) + '</tbody></table>')
+        out.append(f'<section class="shop" id="{shp["id"]}">{left}<div>{"".join(right)}</div></section>')
+    out.append(f'<section class="block"><div class="prose"><p>{esc(t["lbl_any"])}</p></div></section>')
+    out.append(ends(t, root, K[lang]) + '</main>')
+    out.append(foot(t, root, "shops"))
+    return "\n".join(out)
+
+def showcase_page2(t):
+    root = "../../" if t["path"] else "../"
+    en = t["lang"] == "en"; k = K[t['lang']]
+    url = BASE + t['path'] + t['sc_slug'] + '/'
+    book = f"{root}books/botanical-stories/index.html"
+    out = [head2(t, t['sc_title'], t['sc_desc'], "sc", root, ld=showcase_ld(t, url), og="bs-og.jpg"), pill(t, root, "sc"), '<main id="main">']
+    out.append(f"""<section class="hero" aria-labelledby="h">
+ <div class="cells" aria-hidden="true"></div>
+ <div class="wrap">
+  <div><p class="kick">{esc(t['sc_eyebrow'])}</p><h1 id="h">{t['sc_h1'].replace("<span class='hl'>", "<em>").replace("</span>", "</em>")}</h1><p class="lede">{esc(t['sc_lead'])}</p>
+   <div class="ctas"><a class="btn go" href="{DL}">{esc(t['sc_cta'])} <span class="ar" aria-hidden="true">&rarr;</span></a><a class="btn ghost" href="#book">{esc(t['sc_book_h'])}</a></div></div>
+  <div class="stage"><span class="ring" aria-hidden="true"></span><figure class="proof" style="width:min(520px,100%)"><span class="cm"></span><img src="{root}assets/img/bs-cover.webp" width="1200" height="854" alt="{"Botanical Stories, cover" if en else "Botanical Stories, Umschlag"}"><figcaption>Hardcover · 297 × 210 mm · WIRmachenDRUCK</figcaption></figure></div>
+ </div>
+</section>
+<section class="field" id="book" aria-labelledby="bk"><div class="wrap">
+ {sh(t['sc_book_h'], t['sc_book_note'], id_="bk")}
+ <div class="bookframe"><iframe src="{book}" title="Botanical Stories" loading="lazy" allow="fullscreen" allowfullscreen></iframe></div>
+</div></section>
+<section class="block" aria-labelledby="mk"><div class="split"><div><h2 class="sh acc" id="mk">{esc(t['sc_how_h'])}</h2></div>
+ <div><ul class="ticks">{"".join(f'<li><b>{esc(a)}.</b> {esc(b)}</li>' for a, b in t['sc_how'])}</ul></div></div></section>
+<section class="block" aria-labelledby="sp">{sh(t['sc_spreads_h'], "", id_="sp")}
+ <div style="display:grid;gap:12px;margin-top:36px">{"".join(f'<figure class="proof"><span class="cm"></span><img src="{root}assets/img/{f}" width="2400" height="848" alt="{esc(a_en if en else a_de)}" loading="lazy"><figcaption>{esc(a_en if en else a_de)}</figcaption></figure>' for f, a_en, a_de in SPREADS)}</div>
+</section>
+<section class="block" aria-labelledby="gl">{sh(t['sc_galleries'], "", id_="gl")}
+ <ul class="gal" style="margin-top:28px">{"".join(f'<li><a href="https://www.tillheidrich.de/gallery/{g}/">{esc(n)}</a></li>' for n, g in GALLERIES)}</ul>
+</section>
+{ends(t, root, k)}
+</main>""")
+    out.append(foot(t, root, "sc"))
+    return "\n".join(out)
+
+def legal2(t, key, pages):
+    title, body = pages[key]
+    root = "../" if t["path"] else ""
+    note = EN_NOTE if t["lang"] == "en" else ""
+    return "\n".join([head2(t, f"{title} · Billerbook", title, "imp" if key == "impressum" else "priv", root), pill(t, root, "imp" if key == "impressum" else "priv"),
+                      f'<main id="main"><section class="ihead"><h1>{title}</h1><p></p></section><section class="block"><div class="legal-body">{note}{body}</div></section></main>', foot(t, root, "imp" if key == "impressum" else "priv")])
+
 def main():
     mail = os.environ.get("CONTACT_EMAIL", "").strip()
     pages = legal_pages(html.escape(mail) if mail else None)
@@ -542,18 +908,21 @@ def main():
     if os.path.exists(pub): shutil.rmtree(pub)
     shutil.copytree(os.path.join(here, "assets"), os.path.join(pub, "assets"))
     if os.path.isdir(os.path.join(here, "books")): shutil.copytree(os.path.join(here, "books"), os.path.join(pub, "books"))
+    def w(rel, s):
+        f = os.path.join(pub, rel); os.makedirs(os.path.dirname(f), exist_ok=True); open(f, "w").write(s)
+    urls_ = []
     for t in T.values():
-        d = os.path.join(pub, t["path"]); os.makedirs(d, exist_ok=True)
-        open(os.path.join(d, "index.html"), "w").write(page(t))
-        for k in pages: open(os.path.join(d, k + ".html"), "w").write(legal(t, k, pages))
-        sd = os.path.join(d, t["shops_slug"]); os.makedirs(sd, exist_ok=True)
-        open(os.path.join(sd, "index.html"), "w").write(shops_page(t))
-        cd = os.path.join(d, t["sc_slug"]); os.makedirs(cd, exist_ok=True)
-        open(os.path.join(cd, "index.html"), "w").write(showcase_page(t))
-    open(os.path.join(pub, "robots.txt"), "w").write(f"User-agent: *\nAllow: /\nSitemap: {BASE}sitemap.xml\n")
-    urls = ["", "de/", "botanical-stories/", "de/botanical-stories/", "print-shops/", "de/druckereien/", "impressum.html", "datenschutz.html", "de/impressum.html", "de/datenschutz.html"]
-    open(os.path.join(pub, "llms.txt"), "w").write(llms_txt())
-    open(os.path.join(pub, "sitemap.xml"), "w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{u}</loc></url>" for u in urls) + "</urlset>\n")
+        k = K[t['lang']]; p = t['path']
+        w(p + "index.html", home(t))
+        w(p + k['slug_how'] + "/index.html", how_page(t))
+        w(p + k['slug_ai'] + "/index.html", ai_page(t))
+        w(p + t['shops_slug'] + "/index.html", shops_page2(t))
+        w(p + t['sc_slug'] + "/index.html", showcase_page2(t))
+        for key in pages: w(p + key + ".html", legal2(t, key, pages))
+        urls_ += [p, p + k['slug_how'] + "/", p + k['slug_ai'] + "/", p + t['shops_slug'] + "/", p + t['sc_slug'] + "/", p + "impressum.html", p + "datenschutz.html"]
+    w("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {BASE}sitemap.xml\n")
+    w("llms.txt", llms_txt())
+    w("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{x}</loc></url>" for x in urls_) + "</urlset>\n")
     print("built", pub)
 
 if __name__ == "__main__": main()
