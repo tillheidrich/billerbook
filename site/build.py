@@ -309,6 +309,7 @@ def footer(t, root):
 document.documentElement.classList.add('js');
 const io=new IntersectionObserver(es=>es.forEach(e=>{{if(e.isIntersecting){{e.target.classList.add('in');io.unobserve(e.target)}}}}),{{rootMargin:'0px 0px -6% 0px'}});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+addEventListener('message',e=>{{const f=[...document.querySelectorAll('.bookframe iframe')].find(x=>x.contentWindow===e.source);if(f&&e.origin===location.origin&&e.data&&e.data.billerbook==='height'&&e.data.h>0){{f.style.aspectRatio='auto';f.style.height=e.data.h+'px'}}}});
 </script>
 </body></html>"""
 

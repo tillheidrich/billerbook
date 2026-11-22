@@ -1,15 +1,25 @@
 :root{color-scheme:light dark;--bb-bg:#efede8;--bb-ink:#24221f}
 @media (prefers-color-scheme:dark){:root{--bb-bg:#1b1a18;--bb-ink:#ece9e3}}
 html,body{margin:0;background:var(--bb-bg);color:var(--bb-ink);font:15px/1.5 -apple-system,system-ui,sans-serif}
-.bb-book{position:relative;max-width:1400px;margin:0 auto;padding:16px}
-.bb-stage{position:relative;display:grid;place-items:center;min-height:200px;touch-action:pan-y}
+.bb-book{position:relative;max-width:1400px;margin:0 auto;padding:16px;outline:none}
+.bb-book:focus-visible{outline:2px solid currentColor;outline-offset:-2px}
+.bb-stage{position:relative;display:grid;place-items:center;min-height:120px;touch-action:pan-y pinch-zoom}
 .bb-spread[hidden]{display:none}
 .bb-spread{margin:0;width:100%;display:grid;justify-items:center;animation:bb-in .35s cubic-bezier(.16,1,.3,1)}
-.bb-spread img{width:100%;height:auto;max-height:82dvh;object-fit:contain;box-shadow:0 10px 30px rgba(0,0,0,.18);background:#fff}
-.bb-spread.single img{width:auto;max-width:60%}
+.bb-clip{width:100%;max-height:82dvh;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18);background:#fff;display:flex}
+.bb-clip img{display:block;width:100%;height:auto;max-height:82dvh;object-fit:contain}
+.bb-spread.single .bb-clip{width:auto;max-width:60%}
+.bb-spread.single .bb-clip img{width:auto;max-width:100%}
 .bb-spread figcaption{font-size:12px;opacity:.6;margin-top:8px;font-variant-numeric:tabular-nums}
+/* Page mode (narrow screens, e.g. phones in portrait): one page at a time, cut from the spread image. */
+.bb-pages .bb-book{padding:8px 0 12px}
+.bb-pages .bb-spread:not(.single) .bb-clip{width:100%;max-height:none}
+.bb-pages .bb-spread:not(.single) .bb-clip img{width:200%;max-width:none;max-height:none;flex:none}
+.bb-pages .bb-spread.bb-r .bb-clip img{margin-left:-100%}
+.bb-pages .bb-spread.single .bb-clip{max-width:100%;width:100%}
+.bb-pages .bb-spread.single .bb-clip img{width:100%}
 .bb-nav{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:8px}
-.bb-nav button{width:40px;height:40px;border-radius:50%;border:1px solid currentColor;background:none;color:inherit;font-size:20px;cursor:pointer;opacity:.75}
+.bb-nav button{width:44px;height:44px;border-radius:50%;border:1px solid currentColor;background:none;color:inherit;font-size:20px;cursor:pointer;opacity:.75;touch-action:manipulation}
 .bb-nav button:hover{opacity:1}.bb-nav button:disabled{opacity:.25;cursor:default}
 .bb-count{font-variant-numeric:tabular-nums;min-width:64px;text-align:center}
 .bb-text{max-width:70ch;margin:24px auto;padding:0 16px}.bb-text h3{font-size:13px;margin:16px 0 4px;opacity:.7}
