@@ -14,7 +14,7 @@ npm ci --include=dev --no-audit --no-fund
 # sharp ships one native build per CPU: add the other Mac architecture so both DMGs work.
 # --force: npm refuses packages for a foreign CPU otherwise.
 # Versions must match what the installed sharp expects, so read them from its package.json.
-SHARP_PKGS=$(node -e 'const o=require("sharp/package.json").optionalDependencies;console.log(["sharp-darwin-x64","sharp-libvips-darwin-x64","sharp-darwin-arm64","sharp-libvips-darwin-arm64"].map(n=>"@img/"+n+"@"+o["@img/"+n]).join(" "))')
+SHARP_PKGS=$(node -e 'const o=JSON.parse(require("fs").readFileSync("node_modules/sharp/package.json","utf8")).optionalDependencies;console.log(["sharp-darwin-x64","sharp-libvips-darwin-x64","sharp-darwin-arm64","sharp-libvips-darwin-arm64"].map(n=>"@img/"+n+"@"+o["@img/"+n]).join(" "))')
 echo "sharp natives: $SHARP_PKGS"
 # shellcheck disable=SC2086
 npm install --no-save --force --include=dev --no-audit --no-fund $SHARP_PKGS
