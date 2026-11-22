@@ -26,6 +26,19 @@ console.log((await call('page_tools', { project: 'MCP Test', edition: 'Hardcover
 console.log((await call('set_page_style', { project: 'MCP Test', edition: 'Hardcover', page: 2, gap: 8, hide_number: true })).text);
 console.log((await call('lightroom_usage', {})).text.slice(0, 200));
 const prof = JSON.parse((await call('save_print_profile', { project: 'MCP Test', from_edition: 'KDP', name: 'Copy shop' })).text); console.log('profile', prof.id);
+// 0.11 design and output tools through MCP only
+const cat = JSON.parse((await call('design_catalog', { project: 'MCP Test', edition: 'Hardcover' })).text); console.log('catalog', cat.families.length, 'fonts', cat.graphics.length, 'graphics', cat.tones.length, 'tones');
+await call('set_text_style', { project: 'MCP Test', edition: 'Hardcover', preset: 'classic' });
+await call('set_text_style', { project: 'MCP Test', edition: 'Hardcover', style: 'caption', italic: true, size: 9 });
+await call('set_page_layout', { project: 'MCP Test', edition: 'Hardcover', page: 0, layout: 'tafel-legende' });
+await call('format_text', { project: 'MCP Test', edition: 'Hardcover', page: 0, index: 0, value: 'Tostedt im Schnee' });
+await call('set_tone', { project: 'MCP Test', edition: 'Hardcover', page: 0, slot: 0, tone: 'bw' });
+await call('set_background_graphic', { project: 'MCP Test', edition: 'Hardcover', page: 0, graphic: 'paper-warm' });
+console.log('barcode', (await call('set_barcode', { project: 'MCP Test', edition: 'KDP', mode: 'placeholder' })).text);
+const pv = await call('view_spread', { project: 'MCP Test', edition: 'Hardcover', page: 0, soft_proof: true, gamut: true }); fs.writeFileSync('/tmp/fbs-mcp/proof.jpg', Buffer.from(pv.data, 'base64')); console.log('proof view', pv.mimeType);
+const used = JSON.parse((await call('list_used_files', { project: 'MCP Test', edition: 'Hardcover' })).text); console.log('used files', used.length, used[0].tone);
+const ex2 = JSON.parse((await call('export_pdf', { project: 'MCP Test', edition: 'Hardcover', parts: ['proof', 'screen', 'filelist', 'epub'], out_dir: '/tmp/fbs-mcp/out2' })).text); console.log('export 0.11', ex2.state, ex2.files.map((f) => f.part).join(','));
+if (ex2.state !== 'done') throw new Error(ex2.error);
 // UI smoke: static + api
-for (const u of ['/', '/app.js', '/api/system', `/api/project/${p.id}/pool`]) { const r = await fetch(`http://127.0.0.1:4599${u}`); console.log(u, r.status); }
+for (const u of ['/', '/app.js', '/api/system', `/api/project/${p.id}/pool`, '/api/fonts.css', '/fonts/eb-garamond/eb-garamond-latin-400-normal.woff', `/api/design-catalog?p=${p.id}`]) { const r = await fetch(`http://127.0.0.1:4599${u}`); console.log(u, r.status); }
 await c.close(); process.exit(0);

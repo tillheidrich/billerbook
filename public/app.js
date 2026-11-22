@@ -3,6 +3,12 @@ import { LAYOUTS, LAYOUT_ORDER, COVER_ORDER, COVER_LAYOUTS, buildFrames, pageOwn
 import { findProvider, allProviders, registerProfiles, papersOf, editionSpecFrom, profileFromEdition, validateProfile } from './lib/providers.js';
 import * as ops from './lib/ops.js';
 import { t, tl, getLang, setLang, STRINGS } from './lib/i18n.js';
+import { resolveStyle, cssFamily, ROLES, customStyles, STYLE_KEYS, PT_TO_MM } from './lib/text.js';
+import { GRAPHICS, graphicSvg, pageGraphic } from './lib/graphics.js';
+import { TEMPLATES } from './lib/templates.js';
+import { TONES } from './lib/tones.js';
+import { parseIsbn, parseAddon, barcodeBars, isbnLabel, defaultBarcodeBox, KDP_BOX } from './lib/barcode.js';
+import { safeColor } from './lib/safe.js';
 
 // ---------- state ----------
 const CLIENT = ops.rid();
@@ -10,6 +16,7 @@ const S = {
   sys: null, project: null, pool: [], poolMap: new Map(), usage: new Map(),
   ed: 0, spread: 0, page: null, sel: null, view: 'pages', filter: 'all', search: '', poolSel: new Set(),
   hist: [], fut: [], saveTimer: null, saving: false, pendingSave: false, preflight: null,
+  proof: false, gamut: false, catalog: null, textSel: null,
 };
 const $ = (s, el = document) => el.querySelector(s);
 const h = (tag, attrs = {}, ...kids) => {
@@ -27,6 +34,21 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 const ed = () => S.project.editions[S.ed];
 const thumb = (key, s = 400) => `/api/thumb?p=${S.project.id}&k=${encodeURIComponent(key)}&s=${s}`;
+// Thumbnail as it will print: with the photo's tone and, in soft-proof mode, through the printer profile.
+const thumbOf = (slot, s = 400) => {
+  let u = thumb(slot.key, s);
+  if (slot.tone) u += `&tone=${slot.tone}&ts=${slot.toneStrength ?? 0.6}`;
+  if (S.proof) u += `&proof=${ed().id}${S.gamut ? '&gamut=1' : ''}`;
+  return u;
+};
+const nameOf = (o) => (o?.name ? o.name[getLang()] || o.name.en : '');
+// Background graphic as inline SVG behind the page content.
+function graphicEl(gfx, W, H, k, bg, inset) {
+  const el = h('div', { class: 'gfx', html: graphicSvg(gfx.id, W, H, { color: gfx.color, bg, inset, opacity: gfx.opacity ?? 1, seed: 7 }) });
+  const svg = el.firstChild;
+  if (svg) { svg.setAttribute('width', `${W * k}`); svg.setAttribute('height', `${H * k}`); }
+  return el;
+}
 const aspectOf = (k) => { const it = S.poolMap.get(k); return it?.w ? it.w / it.h : null; };
 
 async function api(path, { method, body, raw } = {}) {
@@ -122,6 +144,18 @@ function connectEvents() {
   };
 }
 
+// ---------- theme ----------
+// system (default) follows macOS light/dark; light and dark are fixed choices.
+const themeQuery = window.matchMedia('(prefers-color-scheme: light)');
+function getTheme() { try { return localStorage.getItem('billerbook-theme') || 'system'; } catch { return 'system'; } }
+function applyTheme() {
+  const pref = getTheme();
+  document.documentElement.dataset.theme = pref === 'system' ? (themeQuery.matches ? 'light' : 'dark') : pref;
+}
+function setTheme(v) { try { localStorage.setItem('billerbook-theme', v); } catch {} applyTheme(); }
+themeQuery.addEventListener?.('change', applyTheme);
+applyTheme();
+
 // ---------- boot ----------
 async function boot() {
   document.documentElement.lang = getLang();
@@ -142,7 +176,9 @@ async function openProject(id) {
   S.project = await api(`/api/project/${id}`);
   location.hash = id;
   try { localStorage.setItem('billerbook-last', id); } catch {}
-  S.ed = 0; S.spread = 0; S.sel = null; S.page = null; S.hist = []; S.fut = []; S.poolSel.clear();
+  S.ed = 0; S.spread = 0; S.sel = null; S.page = null; S.hist = []; S.fut = []; S.poolSel.clear(); S.textSel = null;
+  $('#fontcss').href = `/api/fonts.css?p=${id}`;
+  api(`/api/design-catalog?p=${id}`).then((c) => { S.catalog = c; }).catch(() => {});
   S.usage = ops.usage(S.project);
   renderAll();
   setStatus('…');
@@ -170,9 +206,16 @@ function renderTop() {
   });
   tabs.append(h('button', { class: 'ed-tab add', onclick: () => editionModal(null), title: t('newEdition') }, '+'));
   const views = $('#views'); views.innerHTML = '';
-  for (const v of ['pages', 'cover', 'overview']) views.append(h('button', { role: 'tab', 'aria-selected': S.view === v, onclick: () => { S.view = v; S.sel = null; renderAll(); } }, t(v)));
+  for (const v of ['pages', 'cover', 'overview']) views.append(h('button', { role: 'tab', 'aria-selected': S.view === v, onclick: () => { S.view = v; S.sel = null; S.textSel = null; renderAll(); } }, t(v)));
   $('#autoBtn').textContent = t('autoFill');
   $('#exportBtn').textContent = t('export');
+  $('#aiBtn').textContent = t('connectAi');
+  $('#tplBtn').textContent = t('templates');
+  const pb = $('#proofBtn');
+  pb.textContent = S.gamut ? t('proofGamut') : t('proof');
+  pb.setAttribute('aria-pressed', String(S.proof));
+  $('#stage').classList.toggle('proofing', S.proof);
+  $('#stage').style.setProperty('--proof-label', JSON.stringify(S.gamut ? t('proofGamut') : t('proof')));
 }
 
 // Pool
@@ -202,6 +245,7 @@ function renderPool() {
   el.append(h('div', { class: 'pool-head' },
     h('div', { class: 'pool-title' }, h('h2', {}, t('pool')), h('div', { class: 'row' },
       h('button', { class: 'btn ghost small', onclick: () => sourcesModal() }, t('sources')),
+      h('button', { class: 'btn ghost small', onclick: () => importModal() }, t('import')),
       h('button', { class: 'btn ghost small', title: t('refresh'), onclick: async () => { setStatus('…'); await loadPool(true); setStatus(''); renderAll(); } }, '↻'))),
     h('div', { class: 'coverage', title: t('placedOf', { a: placed, b: total }) }, h('i', { style: { width: `${total ? (placed / total) * 100 : 0}%` } })),
     h('div', { class: 'pool-stats' }, h('span', { class: 'num' }, t('placedOf', { a: placed, b: total })), nofile ? h('span', { class: 'num' }, t('missingFiles', { n: nofile })) : null),
@@ -326,7 +370,7 @@ function renderStage() {
 }
 function go(d) {
   const n = spreadsOf(ed().pages.length).length;
-  S.spread = clamp(S.spread + d, 0, n - 1); S.sel = null; S.page = null;
+  S.spread = clamp(S.spread + d, 0, n - 1); S.sel = null; S.page = null; S.textSel = null;
   renderStage(); renderInspector(); highlightStrip();
 }
 
@@ -336,10 +380,12 @@ function pageEl(i, left, k, spread = false) {
   const W = spread ? 2 * e.w : e.w;
   const bg = p.bg || e.bg || '#ffffff';
   const el = h('div', { class: 'page', style: { left: `${left}px`, width: `${W * k}px`, height: `${e.h * k}px`, background: bg }, 'data-page': i });
-  el.addEventListener('mousedown', (ev) => { if (ev.target === el) { S.page = i; S.sel = null; renderInspector(); el.closest('.spread')?.querySelectorAll('.frame.sel').forEach((f) => f.classList.remove('sel')); } });
+  el.addEventListener('mousedown', (ev) => { if (ev.target === el) { S.page = i; S.sel = null; S.textSel = null; renderInspector(); el.closest('.spread')?.querySelectorAll('.frame.sel').forEach((f) => f.classList.remove('sel')); } });
   const frames = buildFrames(e, i, aspectOf);
   const target = { kind: 'page', page: i };
-  if (p.bgPhoto?.key) el.append(h('img', { class: 'bgphoto', src: thumb(p.bgPhoto.key, 1200), alt: '', draggable: 'false', style: { opacity: p.bgPhoto.opacity ?? 0.35 } }));
+  const gfx = pageGraphic(e, p);
+  if (gfx) el.append(graphicEl(gfx, W, e.h, k, bg, e.safety ?? 8));
+  if (p.bgPhoto?.key) el.append(h('img', { class: 'bgphoto', src: thumbOf({ key: p.bgPhoto.key, tone: p.bgPhoto.tone }, 1200), alt: '', draggable: 'false', style: { opacity: p.bgPhoto.opacity ?? 0.35 } }));
   frames.forEach((f, idx) => {
     const fe = frameEl({ ...f, idx }, target, k, p, { textColor: luminance(bg) < 0.45 ? '#fff' : '#1a1a1a' });
     if (p.layout === 'frei') addResize(fe, target, { ...f, idx }, k, W, e.h);
@@ -347,7 +393,7 @@ function pageEl(i, left, k, spread = false) {
   });
   const pn = !spread && pageNumberFor(e, i);
   if (pn) el.append(h('div', { class: 'pnum', style: { [pn.align === 'right' ? 'right' : 'left']: pn.align === 'right' ? `${(e.w - pn.x) * k}px` : pn.align === 'center' ? `${pn.x * k - 10}px` : `${pn.x * k}px`, top: `${(pn.y - 3) * k}px`, fontSize: `${Math.max(7, 2.8 * k)}px`, color: luminance(bg) < 0.45 ? '#fff' : '#333' } }, String(i + 1)));
-  if (!frames.some((f) => f.kind === 'image') && p.layout !== 'text' && p.layout !== 'leer') el.append(h('div', { class: 'hint-drop' }, t('dropHere')));
+  if (!frames.some((f) => f.kind === 'image') && LAYOUTS[p.layout]?.group !== 'text' && p.layout !== 'leer') el.append(h('div', { class: 'hint-drop' }, t('dropHere')));
   // guides
   const sf = e.safety || 5;
   el.append(h('div', { class: 'guide', style: { left: `${sf * k}px`, top: `${sf * k}px`, width: `${(W - 2 * sf) * k}px`, height: `${(e.h - 2 * sf) * k}px` } }));
@@ -391,19 +437,51 @@ function frameEl(f, target, k, owner, { textColor = '#1a1a1a' } = {}) {
   if (f.kind === 'text') {
     const texts = getTexts(target);
     const role = f.role || 'body';
-    const size = { title: 26, body: 11, caption: 9, spine: 11, back: 9 }[role] || 11;
-    const el = h('div', {
-      class: `text-frame${role === 'spine' ? ' spine' : ''}`, contenteditable: 'plaintext-only', 'data-placeholder': `${STRINGS[getLang()].roles[role] || ''} – ${t('typeHere')}`,
-      style: { ...style, fontSize: `${(size * 25.4 / 72) * k}px`, color: textColor, textAlign: role === 'title' || role === 'spine' ? 'center' : 'left', fontFamily: ed().font === 'serif' ? 'Times New Roman, Times, serif' : 'Helvetica Neue, Helvetica, Arial, sans-serif', fontWeight: role === 'title' || role === 'spine' ? 700 : 400 },
+    const tx = texts[f.text] || {};
+    const st = resolveStyle(ed(), role, tx);
+    const sizePx = st.size * PT_TO_MM * k;
+    // While editing, the browser sets the text with the same font files and values. Otherwise the
+    // frame shows the server's outlines, so line breaks are exactly those of the PDF.
+    const edit = h('div', {
+      class: `text-edit${role === 'spine' ? ' spine' : ''}`, contenteditable: 'plaintext-only', spellcheck: 'true', lang: getLang(),
+      'data-placeholder': `${STRINGS[getLang()].roles[role] || ''} – ${t('typeHere')}`,
+      style: {
+        fontFamily: cssFamily(st), fontWeight: st.weight, fontStyle: st.italic ? 'italic' : 'normal', fontSize: `${sizePx}px`,
+        lineHeight: String(st.leading), letterSpacing: `${st.tracking / 1000}em`, textTransform: st.caps ? 'uppercase' : 'none',
+        textAlign: role === 'spine' ? 'center' : st.align, color: st.color || textColor,
+      },
     });
-    el.textContent = texts[f.text]?.value || '';
-    el.addEventListener('blur', () => {
-      const v = el.innerText.replace(/\n$/, '');
+    edit.textContent = tx.value || '';
+    const el = h('div', { class: `text-frame${role === 'spine' ? ' spine' : ''}${S.textSel && S.textSel.kind === target.kind && S.textSel.page === target.page && S.textSel.index === f.text ? ' tsel' : ''}`, style }, edit);
+    if (tx.value?.trim() && S.project.version != null) {
+      const q = target.kind === 'cover' ? 'cover=1' : `page=${target.page}`;
+      const img = h('img', { class: 'text-svg', alt: '', draggable: 'false', src: `/api/project/${S.project.id}/text.svg?edition=${ed().id}&${q}&frame=${f.text}&v=${S.project.version}-${encodeURIComponent(JSON.stringify(st)).length}-${(tx.value || '').length}` });
+      el.append(img);
+      el.classList.add('outlined');
+    }
+    edit.addEventListener('focus', () => {
+      el.classList.add('editing');
+      S.textSel = { kind: target.kind, page: target.page, index: f.text, role };
+      document.querySelectorAll('.text-frame.tsel').forEach((n) => n.classList.remove('tsel'));
+      el.classList.add('tsel');
+      renderInspector();
+    });
+    edit.addEventListener('blur', () => {
+      el.classList.remove('editing');
+      const v = edit.innerText.replace(/\n$/, '');
       if ((texts[f.text]?.value || '') === v) return;
       mutate(() => { const arr = getTexts(target); arr[f.text] = { ...(arr[f.text] || {}), value: v }; }, { skipRender: true });
       renderStrip();
+      // New outlines once the save has gone through.
+      setTimeout(() => S.view !== 'overview' && !document.activeElement?.isContentEditable && renderStage(), 700);
     });
-    el.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Escape') el.blur(); });
+    edit.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Escape') edit.blur(); });
+    if (target.kind === 'page' && ed().pages[target.page]?.layout === 'frei') {
+      el.addEventListener('pointerdown', (ev) => { if (ev.altKey) startFrameMove(ev, el, target, f, k); });
+      const mv = h('div', { class: 'handle move', title: t('moveFrame') }, '✥');
+      mv.addEventListener('pointerdown', (ev) => startFrameMove(ev, el, target, f, k));
+      el.append(mv);
+    }
     return el;
   }
   const slots = getSlots(target);
@@ -422,13 +500,18 @@ function frameEl(f, target, k, owner, { textColor = '#1a1a1a' } = {}) {
     });
   };
   if (it) {
-    img = h('img', { src: thumb(slot.key, f.w * k > 420 ? 1600 : 800), alt: '', draggable: 'false' });
+    img = h('img', { src: thumbOf(slot, f.w * k > 420 ? 1600 : 800), alt: '', draggable: 'false' });
     el.append(img);
     layoutImg();
     const ppi = Math.round(pl.ppi);
     if (!it.hasFile) el.append(h('span', { class: 'badge err', title: t('fNoFile') }, 'RAW'));
     else if (ppi < 150) el.append(h('span', { class: 'badge err' }, `${ppi} ppi`));
     else if (ppi < Math.min(240, (ed().ppi || 300) * 0.8)) el.append(h('span', { class: 'badge warn' }, `${ppi} ppi`));
+    if (target.kind === 'page' && ed().pages[target.page]?.layout === 'frei') {
+      const mv = h('div', { class: 'handle move', title: t('moveFrame') }, '✥');
+      mv.addEventListener('pointerdown', (ev) => startFrameMove(ev, el, target, f, k));
+      el.append(mv);
+    }
     const handle = h('div', { class: 'handle', draggable: 'true', title: '⇄' }, '⇄');
     handle.addEventListener('dragstart', (ev) => { ev.stopPropagation(); ev.dataTransfer.setData('text/fbs-slot', JSON.stringify({ ...target, slot: f.slot })); ev.dataTransfer.effectAllowed = 'move'; });
     el.append(handle);
@@ -504,15 +587,22 @@ function frameEl(f, target, k, owner, { textColor = '#1a1a1a' } = {}) {
 }
 function select(target, slot, idx) {
   S.sel = { ...target, slot, idx };
+  S.textSel = null;
   if (target.kind === 'page') S.page = target.page;
   document.querySelectorAll('.frame.sel').forEach((n) => n.classList.remove('sel'));
   renderStage(); renderInspector();
 }
 
 // ---------- free frames: Alt+drag moves, corner handle resizes, snapping to margins and edges ----------
-function snapLines(W, H) {
+// Snap targets: page edges, margins, centre, thirds and the canon block (inner/top 1/9, outer/bottom 2/9).
+function snapLines(W, H, side = 'R') {
   const e = ed(), m = e.margin ?? 12;
-  const xs = [0, m, W / 2, W - m, W], ys = [0, m, H / 2, H - m, H];
+  const xs = [0, m, W / 2, W - m, W], ys = [0, m, H / 2, H - m, H, H / 3, (2 * H) / 3, H / 9, (7 * H) / 9];
+  const pages = W > e.w * 1.5 ? [[0, 'L'], [e.w, 'R']] : [[0, side]];
+  for (const [x0, sd] of pages) {
+    const pw = e.w;
+    xs.push(x0 + pw / 3, x0 + (2 * pw) / 3, x0 + (sd === 'L' ? (2 * pw) / 9 : pw / 9), x0 + (sd === 'L' ? (8 * pw) / 9 : (7 * pw) / 9));
+  }
   if (W > e.w * 1.5) xs.push(e.w, e.w - m, e.w + m);
   return { xs, ys };
 }
@@ -524,7 +614,7 @@ function startFrameMove(ev, el, target, f, k) {
   const before = snapshot();
   const fr = p.frames[f.idx];
   const start = { x: ev.clientX, y: ev.clientY, fx: fr.x, fy: fr.y };
-  const { xs, ys } = snapLines(W, H);
+  const { xs, ys } = snapLines(W, H, target.page % 2 === 1 ? 'L' : 'R');
   const move = (m) => {
     let nx = start.fx * W + (m.clientX - start.x) / k, ny = start.fy * H + (m.clientY - start.y) / k;
     const w = fr.w * W, h = fr.h * H;
@@ -565,7 +655,10 @@ function renderCoverStage(st) {
   const bg = e.coverDesign.bg || '#ffffff';
   const wrap = h('div', { class: 'cover-wrap', style: { width: `${cs.W * k}px`, height: `${cs.H * k}px`, background: bg } });
   const target = { kind: 'cover' };
+  if (e.coverDesign.bgGraphic?.id) wrap.append(graphicEl(e.coverDesign.bgGraphic, cs.W, cs.H, k, bg, cs.bleed + (e.safety ?? 6)));
   for (const f of frames) wrap.append(frameEl(f, target, k, null, { textColor: luminance(bg) < 0.45 ? '#fff' : '#1a1a1a' }));
+  const bcEl = barcodeEl(e, cs, k);
+  if (bcEl) wrap.append(bcEl);
   const v = cs.visible;
   wrap.append(h('div', { class: 'cover-trim', style: { left: `${v.x * k}px`, top: `${v.y * k}px`, width: `${v.w * k}px`, height: `${v.h * k}px` } }));
   for (const x of [cs.spine.x, cs.spine.x + cs.spine.w]) wrap.append(h('div', { class: 'cover-line', style: { left: `${x * k}px` } }));
@@ -573,7 +666,7 @@ function renderCoverStage(st) {
     wrap.append(h('div', { class: 'cover-hinge', style: { left: `${(cs.spine.x - cs.hinge) * k}px`, width: `${cs.hinge * k}px` } }));
     wrap.append(h('div', { class: 'cover-hinge', style: { left: `${(cs.spine.x + cs.spine.w) * k}px`, width: `${cs.hinge * k}px` } }));
   }
-  st.append(h('div', { class: 'stage-label num' }, `${t('cover')} · ${cs.W.toFixed(1)} × ${cs.H.toFixed(1)} mm · ${t('spine').replace(' (mm)', '')} ${e.spine ?? '?'} mm`));
+  st.append(h('div', { class: 'stage-label num' }, `${t('cover')} · ${cs.W.toFixed(1)} × ${cs.H.toFixed(1)} mm · ${t('spine').replace(' (mm)', '')} ${spineOf(e).mm.toFixed(1)} mm${spineOf(e).exact ? '' : ` (${t('spEstimate')})`}`));
   st.append(wrap);
 }
 
@@ -586,7 +679,9 @@ function miniSpread(idx, height) {
   const drawPage = (i, left, spread) => {
     const p = e.pages[i];
     const W = spread ? 2 * e.w : e.w;
-    const pg = h('div', { class: 'mp', style: { left: `${left}px`, width: `${W * k}px`, background: p.bg || e.bg || '#fff' } });
+    const pg0 = pageGraphic(e, p);
+    const gfxBase = pg0 && ['paper-warm', 'paper-cool', 'kraft', 'linen'].includes(pg0.id) ? (pg0.color || GRAPHICS.find((g) => g.id === pg0.id)?.color) : null;
+    const pg = h('div', { class: 'mp', style: { left: `${left}px`, width: `${W * k}px`, background: gfxBase || p.bg || e.bg || '#fff' } });
     for (const f of buildFrames(e, i, aspectOf)) {
       const st = { left: `${f.x * k}px`, top: `${f.y * k}px`, width: `${f.w * k}px`, height: `${f.h * k}px` };
       if (f.kind === 'text') { pg.append(h('div', { class: 'mt', style: { ...st, height: `${Math.min(f.h, 4) * k}px` } })); continue; }
@@ -594,7 +689,7 @@ function miniSpread(idx, height) {
       const it = s && S.poolMap.get(s.key);
       if (it) {
         const pl = placement(f.w, f.h, it.w, it.h, s, it.focal);
-        st.backgroundImage = `url("${thumb(s.key, 200)}")`;
+        st.backgroundImage = `url("${thumbOf({ key: s.key, tone: s.tone, toneStrength: s.toneStrength }, 200)}")`;
         st.backgroundSize = `${it.w * pl.s * k}px ${it.h * pl.s * k}px`;
         st.backgroundPosition = `${(pl.dx - pl.sx * pl.s) * k}px ${(pl.dy - pl.sy * pl.s) * k}px`;
         st.backgroundColor = 'transparent';
@@ -644,6 +739,13 @@ function highlightStrip() {
 function renderOverview(st) {
   const o = h('div', { class: 'overview' });
   const n = spreadsOf(ed().pages.length).length;
+  if (ed().cover?.mode !== 'none') {
+    const e = ed();
+    const img = h('img', { src: `/api/project/${S.project.id}/spread.jpg?edition=${e.id}&cover=1&guides=0&w=600&v=${S.project.version || 0}`, alt: t('cover'), loading: 'lazy', style: { height: '120px', width: 'auto', display: 'block' } });
+    const w = h('div', { class: 'mini-wrap cover-tile' }, h('div', { class: 'mini', style: { height: '120px' } }, img), h('div', { class: 'mini-label' }, t('cover')));
+    w.addEventListener('click', () => { S.view = 'cover'; S.sel = null; renderAll(); });
+    o.append(w);
+  }
   for (let i = 0; i < n; i++) o.append(miniSpread(i, 120));
   st.append(o);
 }
@@ -667,6 +769,9 @@ function renderInspector() {
   if (!S.project) return;
   const e = ed();
   if (S.view === 'cover') return renderCoverInspector(el);
+  // What is selected comes first: the frame or text you just clicked.
+  if (S.sel && S.sel.kind === 'page') renderFrameSection(el);
+  if (S.textSel && S.textSel.kind === 'page') renderTextSection(el);
   const pg = currentPage();
   if (pg != null && e.pages[pg]) {
     const own = pageOwner(e, pg);
@@ -677,11 +782,15 @@ function renderInspector() {
     const list = LAYOUT_ORDER.filter((id) => LAYOUTS[id].group !== 'spread' || spreadsOk);
     if (p.layout === 'frei') list.unshift('frei');
     let lastGroup = null;
+    // Plain layouts first, then the photo-book (monograph) family, single pages before spreads.
+    list.sort((a, b) => rank(a) - rank(b));
+    function rank(id) { const L = LAYOUTS[id]; return (L.group === 'spread' ? 2 : 0) + (L.family === 'monograph' ? 1 : 0) + (id === 'frei' ? -1 : 0); }
     for (const id of list) {
-      const g = LAYOUTS[id].group === 'spread' ? 'spread' : 'single';
-      if (g !== lastGroup && g === 'spread') lays.append(h('div', { class: 'lay-group', style: { gridColumn: '1 / -1' } }, t('layoutsSpread')));
+      const L0 = LAYOUTS[id];
+      const g = `${L0.group === 'spread' ? 'spread' : 'single'}${L0.family === 'monograph' ? '-mono' : ''}`;
+      if (g !== lastGroup && g !== 'single') lays.append(h('div', { class: 'lay-group', style: { gridColumn: '1 / -1' } }, g === 'single-mono' ? t('layoutsMono') : g === 'spread' ? t('layoutsSpread') : t('layoutsMonoSpread')));
       lastGroup = g;
-      const b = h('button', { class: 'lay', title: tl(id), 'aria-pressed': p.layout === id, html: layoutIcon(id, e, own.owner), style: g === 'spread' ? { gridColumn: 'span 2' } : null });
+      const b = h('button', { class: 'lay', title: tl(id), 'aria-pressed': p.layout === id, html: layoutIcon(id, e, own.owner), style: g.startsWith('spread') ? { gridColumn: 'span 2' } : null });
       b.addEventListener('click', () => { if (id !== 'frei') mutate((pr) => ops.setLayout(pr, e.id, own.owner, id)); });
       lays.append(b);
     }
@@ -736,7 +845,8 @@ function renderInspector() {
         h('button', { class: 'btn small', onclick: () => { const name = prompt(t('layoutName'), tl(p.layout)); if (name != null) mutate((pr) => ops.saveCustomLayout(pr, e.id, own.owner, name)); } }, t('saveLayout'))),
       h('label', { class: 'field' }, h('span', {}, t('copyLayoutTo')),
         sel([['', '…'], ['next', t('clNext')], ['all', t('clAll')], ['range', t('clRange')]], '', (v) => { if (v) copyTo(v); }))),
-    h('details', { class: 'sec page-more' }, h('summary', {}, t('bgPhoto'), ' · ', t('pageMargin')),
+    h('details', { class: 'sec page-more', open: S.pageMoreOpen || null, ontoggle: (ev) => { S.pageMoreOpen = ev.target.open; } }, h('summary', {}, t('bgGraphic'), ' · ', t('bgPhoto'), ' · ', t('pageMargin')),
+      graphicPicker(pageGraphic(e, p), own.spread ? 2 * e.w : e.w, e.h, p.bg || e.bg || '#ffffff', (g) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { bgGraphic: g || (e.bgGraphic ? { id: 'none' } : null) }))),
       h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('bgPhoto')),
         p.bgPhoto ? h('img', { class: 'bgthumb', src: thumb(p.bgPhoto.key, 120), alt: '' }) : h('span', { class: 'muted' }, t('bgPhotoNone'))),
       h('div', { class: 'row' },
@@ -749,7 +859,6 @@ function renderInspector() {
         h('label', { class: 'field' }, h('span', {}, `${t('pageGap')} (mm)`), h('input', { class: 'input num', type: 'number', step: 0.5, min: 0, value: p.gap ?? '', placeholder: String(e.gap ?? 4), onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { gap: ev.target.value === '' ? null : Number(ev.target.value) })) }))),
       e.pageNumbers && e.pageNumbers !== 'none' ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!p.hideNumber, onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { hideNumber: ev.target.checked || null })) }), ' ', t('hideNumber')) : null));
   }
-  if (S.sel && S.sel.kind === 'page') renderFrameSection(el);
   // edition + preflight
   const pf = S.preflight;
   const sec = h('div', { class: 'sec' }, h('h3', {}, t('preflight'), h('span', { class: 'num' }, pf ? `${pf.warnings.filter((w) => w.level === 'error').length} / ${pf.warnings.length}` : '')));
@@ -791,13 +900,191 @@ function renderFrameSection(el) {
       h('button', { 'aria-selected': s.fit === 'contain', onclick: () => upd({ fit: 'contain', zoom: 1, ox: 0, oy: 0 }) }, t('contain'))),
     h('label', { class: 'field' }, h('span', {}, `${t('zoom')} ${Math.round((s.zoom || 1) * 100)} %`),
       h('input', { type: 'range', min: 1, max: 4, step: 0.01, value: s.zoom || 1, disabled: s.fit === 'contain', onchange: (ev) => upd({ zoom: Number(ev.target.value) }) })),
+    p.layout === 'frei' && f ? freeFrameFields(e, pageOwner(e, page).owner, f) : null,
+    toneRow(s, (tone, strength) => mutate((pr) => ops.setTone(pr, e.id, { page }, slot, tone, strength))),
     h('div', { class: 'row' },
       h('button', { class: 'btn small', onclick: () => mutate((pr) => ops.makeFullBleed(pr, e.id, page, slot)) }, t('fullBleed')),
       h('button', { class: 'btn small', onclick: () => upd({ zoom: 1, ox: 0, oy: 0 }) }, t('resetCrop')),
       h('button', { class: 'btn small danger', onclick: () => { mutate((pr) => ops.removeImage(pr, e.id, page, slot)); S.sel = null; renderInspector(); } }, t('remove')))));
 }
+function barcodeEl(e, cs, k) {
+  const bc = e.coverDesign.barcode;
+  if (!bc?.mode || bc.mode === 'none') return null;
+  let box, inner = '';
+  if (bc.mode === 'placeholder') {
+    box = { ...KDP_BOX, ...(bc.x != null ? { x: bc.x, y: bc.y } : defaultBarcodeBox(cs, KDP_BOX, 6.35)) };
+    inner = `<text x="${box.width / 2}" y="${box.height / 2}" font-size="3" text-anchor="middle" fill="#999" font-family="system-ui">${t('bcPlaceholder')}</text>`;
+  } else {
+    const p = parseIsbn(bc.isbn);
+    if (!p.ok) return null;
+    const g = barcodeBars(p.isbn13, { scale: bc.scale || 1, addon: parseAddon(bc.addon), label: isbnLabel(bc.isbn, p.isbn13) });
+    box = { width: g.width, height: g.height, ...(bc.x != null ? { x: bc.x, y: bc.y } : defaultBarcodeBox(cs, g, e.safety ?? 6)) };
+    inner = g.bars.map((b) => `<rect x="${b.x.toFixed(3)}" y="${b.y.toFixed(3)}" width="${b.w.toFixed(3)}" height="${b.h.toFixed(3)}"/>`).join('')
+      + g.texts.map((x) => `<text x="${x.x}" y="${x.y + x.size}" font-size="${x.size / 0.72}" text-anchor="${x.align === 'center' ? 'middle' : 'start'}" font-family="'bb-work-sans', sans-serif">${String(x.text).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]))}</text>`).join('');
+  }
+  return h('div', { class: 'barcode', style: { left: `${box.x * k}px`, top: `${box.y * k}px`, width: `${box.width * k}px`, height: `${box.height * k}px` },
+    html: `<svg viewBox="0 0 ${box.width} ${box.height}" width="100%" height="100%"><rect width="${box.width}" height="${box.height}" fill="#fff"/><g fill="#000">${inner}</g></svg>` });
+}
+
+// ISBN barcode or the print shop's placeholder on the back cover.
+function barcodeSection(e) {
+  const cd = e.coverDesign;
+  const bc = cd.barcode || {};
+  const prov = findProvider(e.provider);
+  const set = (patch) => mutate((p) => ops.setCover(p, e.id, { barcode: patch }));
+  const isbn = bc.isbn ? parseIsbn(bc.isbn) : null;
+  const hint = prov.barcode === 'required' ? t('bcRequired', { shop: prov.name }) : prov.barcode === 'placeholder' ? t('bcPlaceholderHint', { shop: prov.name }) : t('bcOptional');
+  return h('details', { class: 'sec', open: bc.mode || prov.barcode ? true : null }, h('summary', {}, t('barcode')),
+    h('small', { class: 'muted' }, hint),
+    h('div', { class: 'seg' },
+      h('button', { 'aria-selected': !bc.mode || bc.mode === 'none', onclick: () => set({ mode: 'none' }) }, t('bcNone')),
+      h('button', { 'aria-selected': bc.mode === 'isbn', onclick: () => set({ mode: 'isbn' }) }, 'ISBN'),
+      h('button', { 'aria-selected': bc.mode === 'placeholder', onclick: () => set({ mode: 'placeholder' }) }, t('bcPlaceholder'))),
+    bc.mode === 'isbn' ? h('div', {},
+      h('label', { class: 'field' }, h('span', {}, 'ISBN'), h('input', { class: 'input num', value: bc.isbn || '', placeholder: '978-3-…', onchange: (ev) => set({ isbn: ev.target.value.trim() }) }),
+        isbn ? h('small', { style: { color: isbn.ok ? 'var(--ok)' : 'var(--error)' } }, isbn.ok ? `✓ ${isbn.isbn13}${isbn.converted ? ` (${t('bcConverted')})` : ''}` : t(`bcErr.${isbn.error}`)) : null),
+      h('div', { class: 'grid2' },
+        h('label', { class: 'field' }, h('span', {}, t('bcAddon')), h('input', { class: 'input num', value: bc.addon || '', placeholder: '90000', maxlength: 5, onchange: (ev) => set({ addon: ev.target.value.trim() }) })),
+        h('label', { class: 'field' }, h('span', {}, `${t('bcScale')} %`), h('input', { class: 'input num', type: 'number', min: 80, max: 200, step: 5, value: Math.round((bc.scale || 1) * 100), onchange: (ev) => set({ scale: Number(ev.target.value) / 100 }) })))) : null);
+}
+
+// ---------- text, graphics, tone ----------
+function renderTextSection(el) {
+  const e = ed();
+  const ts = S.textSel;
+  const target = ts.kind === 'cover' ? { cover: true } : { page: ts.page };
+  const arr = ts.kind === 'cover' ? e.coverDesign.texts || [] : e.pages[pageOwner(e, ts.page).owner]?.texts || [];
+  const tx = arr[ts.index];
+  if (ts.kind === 'page' && !e.pages[pageOwner(e, ts.page).owner]) return;
+  const st = resolveStyle(e, ts.role, tx || {});
+  const set = (patch) => mutate((pr) => ops.setTextProps(pr, e.id, target, ts.index, patch));
+  const styles = [['', `${t('styleOfRole')}: ${STRINGS[getLang()].roles[ts.role] || ts.role}`], ...customStyles(e).map((x) => [x.id, x.name || x.id])];
+  const fams = (S.catalog?.families || []).map((f) => [f.id, f.name]);
+  const own = (k) => tx && tx[k] != null;
+  el.append(h('div', { class: 'sec' },
+    h('h3', {}, t('textSec'), h('span', {}, STRINGS[getLang()].roles[ts.role] || ts.role)),
+    h('label', { class: 'field' }, h('span', {}, t('textStyle')), sel(styles, tx?.style || '', (v) => set({ style: v || null }))),
+    h('div', { class: 'grid2' },
+      h('label', { class: 'field' }, h('span', {}, t('fontLbl')), sel([['', `– ${S.catalog?.families?.find((f) => f.id === st.family)?.name || st.family}`], ...fams], own('family') ? tx.family : '', (v) => set({ family: v || null }))),
+      h('label', { class: 'field' }, h('span', {}, `${t('size')} (pt)`), h('input', { class: 'input num', type: 'number', step: 0.5, min: 4, value: own('size') ? tx.size : '', placeholder: String(st.size), onchange: (ev) => set({ size: ev.target.value === '' ? null : Number(ev.target.value) }) }))),
+    h('div', { class: 'seg' },
+      ...['left', 'center', 'right'].map((a) => h('button', { 'aria-selected': st.align === a, onclick: () => set({ align: a }) }, { left: '⇤', center: '↔', right: '⇥' }[a])),
+      h('button', { 'aria-selected': st.weight >= 600, onclick: () => set({ weight: st.weight >= 600 ? 400 : 700 }), style: { fontWeight: 700 } }, 'B'),
+      h('button', { 'aria-selected': !!st.italic, onclick: () => set({ italic: !st.italic }), style: { fontStyle: 'italic' } }, 'I'),
+      h('button', { 'aria-selected': !!st.caps, onclick: () => set({ caps: !st.caps }) }, 'AA')),
+    h('div', { class: 'grid2' },
+      h('label', { class: 'field' }, h('span', {}, t('tracking')), h('input', { class: 'input num', type: 'number', step: 10, value: own('tracking') ? tx.tracking : '', placeholder: String(st.tracking), onchange: (ev) => set({ tracking: ev.target.value === '' ? null : Number(ev.target.value) }) })),
+      h('label', { class: 'field' }, h('span', {}, t('leading')), h('input', { class: 'input num', type: 'number', step: 0.05, min: 0.8, value: own('leading') ? tx.leading : '', placeholder: String(st.leading), onchange: (ev) => set({ leading: ev.target.value === '' ? null : Number(ev.target.value) }) }))),
+    h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('textColor')),
+      h('div', { class: 'row' }, h('input', { class: 'input', type: 'color', value: st.color || '#1a1a1a', style: { width: '60px' }, onchange: (ev) => set({ color: ev.target.value }) }),
+        own('color') ? h('button', { class: 'btn small', onclick: () => set({ color: null }) }, t('autoColor')) : null)),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn small', onclick: () => {
+        const name = prompt(t('styleName'), '');
+        if (!name) return;
+        const id = name.toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-').replace(/^-|-$/g, '') || `s${Date.now()}`;
+        const patch = { name };
+        for (const k of STYLE_KEYS) if (st[k] != null) patch[k] = st[k];
+        mutate((pr) => { ops.setTextStyle(pr, e.id, id, patch); ops.setTextProps(pr, e.id, target, ts.index, { style: id, ...Object.fromEntries(STYLE_KEYS.map((k) => [k, null])) }); });
+      } }, t('saveAsStyle')),
+      h('button', { class: 'btn small', onclick: () => stylesModal() }, t('fontsAndStyles')),
+      STYLE_KEYS.some((k) => own(k)) ? h('button', { class: 'btn small', onclick: () => set(Object.fromEntries(STYLE_KEYS.map((k) => [k, null]))) }, t('clearFormatting')) : null)));
+}
+
+// Position and size of a free frame in mm (numbers instead of dragging).
+function freeFrameFields(e, owner, f) {
+  const p = e.pages[owner];
+  const W = p.spread ? 2 * e.w : e.w, H = e.h;
+  const idx = buildFrames(e, owner, aspectOf).indexOf(buildFrames(e, owner, aspectOf).find((x) => x.x === f.x && x.y === f.y && x.kind === f.kind));
+  const fr = p.frames?.[idx];
+  if (!fr) return null;
+  const field = (key, label, total) => h('label', { class: 'field' }, h('span', {}, `${label} (mm)`),
+    h('input', { class: 'input num', type: 'number', step: 0.5, value: Math.round(fr[key] * total * 10) / 10, onchange: (ev) => mutate((pr) => ops.updateFreeFrame(pr, e.id, owner, idx, { [key]: Number(ev.target.value) / total })) }));
+  return h('div', { class: 'grid4' }, field('x', 'X', W), field('y', 'Y', H), field('w', t('width'), W), field('h', t('height'), H));
+}
+
+function graphicPicker(current, W, H, bg, onPick) {
+  const grid = h('div', { class: 'gfx-grid' });
+  grid.append(h('button', { 'aria-pressed': !current, title: t('none'), onclick: () => onPick(null), html: `<svg viewBox="0 0 10 10"><rect width="10" height="10" fill="${safeColor(bg)}"/><path d="M1 9L9 1" stroke="#c33" stroke-width="0.4"/></svg>` }));
+  for (const g of GRAPHICS) {
+    const svg = graphicSvg(g.id, 60, 60, { bg, inset: 8, seed: 7 }).replace(/width="[^"]+mm" height="[^"]+mm"/, '');
+    grid.append(h('button', { 'aria-pressed': current?.id === g.id, title: nameOf(g), html: svg, onclick: () => onPick({ id: g.id, color: current?.id === g.id ? current.color : undefined, opacity: current?.opacity }) }));
+  }
+  return h('div', {}, h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('bgGraphic')),
+    current ? h('input', { class: 'input', type: 'color', title: t('graphicColor'), value: current.color || GRAPHICS.find((g) => g.id === current.id)?.color || '#888888', style: { width: '46px' }, onchange: (ev) => onPick({ ...current, color: ev.target.value }) }) : null),
+  grid,
+  current ? h('label', { class: 'field' }, h('span', {}, `${t('opacity')} ${Math.round((current.opacity ?? 1) * 100)} %`), h('input', { type: 'range', min: 0.1, max: 1, step: 0.05, value: current.opacity ?? 1, onchange: (ev) => onPick({ ...current, opacity: Number(ev.target.value) }) })) : null);
+}
+
+function toneRow(slot, onPick) {
+  const row = h('div', { class: 'tone-row' });
+  const opts = [{ id: null, name: { en: 'Original', de: 'Original' } }, ...TONES];
+  for (const o of opts) {
+    const st = { backgroundImage: `url("${thumbOf({ key: slot.key, tone: o.id, toneStrength: slot.toneStrength }, 120)}")` };
+    row.append(h('button', { 'aria-pressed': (slot.tone || null) === o.id, title: nameOf(o), style: st, onclick: () => onPick(o.id, slot.toneStrength) }));
+  }
+  return h('div', {}, h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('tone')), h('span', { class: 'muted' }, slot.tone ? nameOf(TONES.find((x) => x.id === slot.tone)) : '')),
+    row,
+    slot.tone && slot.tone !== 'bw' ? h('label', { class: 'field' }, h('span', {}, `${t('toneStrength')} ${Math.round((slot.toneStrength ?? 0.6) * 100)} %`), h('input', { type: 'range', min: 0.1, max: 1, step: 0.05, value: slot.toneStrength ?? 0.6, onchange: (ev) => onPick(slot.tone, Number(ev.target.value)) })) : null);
+}
+
+// Fonts and text styles of the edition: presets, role styles, own styles, own font files.
+function stylesModal() {
+  const e = ed();
+  modal((close) => {
+    const body = h('div', {});
+    const draw = () => {
+      body.innerHTML = '';
+      const e2 = ed();
+      const fams = (S.catalog?.families || []).map((f) => [f.id, f.name]);
+      const presets = h('div', { class: 'row' }, ...(S.catalog?.presets || []).map((pr) => h('button', { class: 'btn small', style: { fontFamily: cssFamily({ family: pr.family }) }, onclick: () => { mutate((p) => ops.applyStylePreset(p, e2.id, pr.id)); draw(); } }, nameOf(pr))));
+      const rows = [...ROLES.map((r) => ({ id: r, label: STRINGS[getLang()].roles[r] || r, role: r })), ...customStyles(e2).map((x) => ({ id: x.id, label: x.name || x.id, role: 'body' }))];
+      const list = h('div', { class: 'list' });
+      for (const r of rows) {
+        const st = resolveStyle(e2, r.role, ROLES.includes(r.id) ? {} : { style: r.id });
+        const set = (patch) => { mutate((p) => ops.setTextStyle(p, e2.id, r.id, patch)); draw(); };
+        list.append(h('div', { class: 'li', style: { display: 'block' } },
+          h('div', { class: 'row between' }, h('strong', {}, r.label),
+            !ROLES.includes(r.id) ? h('button', { class: 'btn small danger', onclick: () => set(null) }, t('delete')) : (e2.textStyles?.[r.id] ? h('button', { class: 'btn small', onclick: () => set(null) }, t('reset')) : null)),
+          h('div', { class: 'style-preview', style: { fontFamily: cssFamily(st), fontWeight: st.weight, fontStyle: st.italic ? 'italic' : 'normal', fontSize: `${Math.min(28, st.size * 1.4)}px`, letterSpacing: `${st.tracking / 1000}em`, textTransform: st.caps ? 'uppercase' : 'none' } }, t('stylePreviewText')),
+          h('div', { class: 'grid2' },
+            h('label', { class: 'field' }, h('span', {}, t('fontLbl')), sel(fams, st.family, (v) => set({ family: v }))),
+            h('label', { class: 'field' }, h('span', {}, `${t('size')} (pt)`), h('input', { class: 'input num', type: 'number', step: 0.5, value: st.size, onchange: (ev) => set({ size: Number(ev.target.value) }) }))),
+          h('div', { class: 'grid2' },
+            h('label', { class: 'field' }, h('span', {}, t('weight')), sel([[300, 'Light'], [400, 'Regular'], [500, 'Medium'], [700, 'Bold']], st.weight, (v) => set({ weight: Number(v) }))),
+            h('label', { class: 'field' }, h('span', {}, t('tracking')), h('input', { class: 'input num', type: 'number', step: 10, value: st.tracking, onchange: (ev) => set({ tracking: Number(ev.target.value) }) }))),
+          h('div', { class: 'row' },
+            h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!st.italic, onchange: (ev) => set({ italic: ev.target.checked }) }), ' ', t('italic')),
+            h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!st.caps, onchange: (ev) => set({ caps: ev.target.checked }) }), ' ', t('caps')),
+            h('label', { class: 'field', style: { flex: 1 } }, h('span', {}, t('leading')), h('input', { class: 'input num', type: 'number', step: 0.05, value: st.leading, onchange: (ev) => set({ leading: Number(ev.target.value) }) })))));
+      }
+      body.append(
+        h('label', { class: 'field' }, h('span', {}, t('bookFont')), sel(fams, e2.font && !['sans', 'serif'].includes(e2.font) ? e2.font : resolveStyle(e2, 'body').family, (v) => { mutate((p) => ops.updateEdition(p, e2.id, { font: v })); draw(); })),
+        h('h3', { class: 'small-h' }, t('stylePresets')), presets,
+        h('h3', { class: 'small-h' }, t('textStyles')), list,
+        h('div', { class: 'row' },
+          h('button', { class: 'btn small', onclick: () => { const name = prompt(t('styleName')); if (name) { mutate((p) => ops.setTextStyle(p, e2.id, name.toLowerCase().replace(/[^a-z0-9äöüß]+/g, '-'), { name })); draw(); } } }, `+ ${t('newStyle')}`),
+          h('button', { class: 'btn small', onclick: async () => {
+            try {
+              const pth = await pickPath('file', t('addFont'));
+              if (!pth) return;
+              if (S.pendingSave) await save();
+              const r = await api(`/api/project/${S.project.id}/op`, { body: { op: 'addFont', args: { path: pth } } });
+              S.project = r.project; S.catalog = await api(`/api/design-catalog?p=${S.project.id}`);
+              $('#fontcss').href = `/api/fonts.css?p=${S.project.id}&v=${Date.now()}`;
+              toast(t('fontAdded', { name: r.result.added[0]?.name || '' })); draw(); renderAll();
+            } catch (err) { toast(err.message); }
+          } }, `+ ${t('addFont')}`)),
+        h('small', { class: 'muted' }, t('fontNote')));
+    };
+    draw();
+    return [h('h2', {}, `${t('fontsStylesTitle')} · ${e.name}`), body, h('div', { class: 'foot' }, h('button', { class: 'btn primary', onclick: close }, t('close')))];
+  }, { wide: true });
+}
+
 function renderCoverInspector(el) {
   const e = ed();
+  if (S.textSel?.kind === 'cover') renderTextSection(el);
   const cd = e.coverDesign;
   const lays = h('div', { class: 'layouts', style: { gridTemplateColumns: '1fr 1fr' } });
   const cs = coverSpec(e);
@@ -805,13 +1092,15 @@ function renderCoverInspector(el) {
     const frames = COVER_LAYOUTS[id].build(cs);
     const svg = `<svg viewBox="0 0 ${cs.W} ${cs.H}"><rect class="pg" width="${cs.W}" height="${cs.H}"/>${frames.map((f) => `<rect class="${f.kind === 'image' ? 'im' : 'tx'}" x="${f.x}" y="${f.y}" width="${f.w}" height="${f.kind === 'image' ? f.h : Math.min(f.h, 12)}"/>`).join('')}</svg>`;
     const b = h('button', { class: 'lay', title: tl(id), 'aria-pressed': (cd.layout || 'cover-front') === id, html: svg });
-    b.addEventListener('click', () => mutate(() => { cd.layout = id; }));
+    b.addEventListener('click', () => mutate(() => { ops.setCoverLayout(e, id); }));
     lays.append(b);
   }
   const spineIn = h('input', { class: 'input num', type: 'number', step: '0.1', min: 0, value: e.spine ?? '', placeholder: spineOf({ ...e, spine: null }).mm.toFixed(1), onchange: (ev) => mutate((p) => ops.updateEdition(p, e.id, { spine: ev.target.value === '' ? null : Number(ev.target.value) })) });
   el.append(h('div', { class: 'sec' }, h('h3', {}, t('layout')), lays,
     h('label', { class: 'field' }, h('span', {}, t('spine')), spineIn, h('small', {}, t('spineHint', { n: e.pages.length, e: spineOf({ ...e, spine: null }).mm.toFixed(1) }))),
-    h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('background')), h('input', { class: 'input', type: 'color', value: cd.bg || '#ffffff', style: { width: '60px' }, onchange: (ev) => mutate(() => { cd.bg = ev.target.value; }) }))));
+    h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('background')), h('input', { class: 'input', type: 'color', value: cd.bg || '#ffffff', style: { width: '60px' }, onchange: (ev) => mutate(() => { cd.bg = ev.target.value; }) })),
+    graphicPicker(cd.bgGraphic, cs.W, cs.H, cd.bg || '#ffffff', (g) => mutate((p) => ops.setCover(p, e.id, { bgGraphic: g })))));
+  el.append(barcodeSection(e));
   if (S.sel?.kind === 'cover') {
     const s = cd.slots[S.sel.slot];
     if (s) el.append(h('div', { class: 'sec' }, h('h3', {}, t('frame')),
@@ -819,6 +1108,7 @@ function renderCoverInspector(el) {
         h('button', { 'aria-selected': s.fit !== 'contain', onclick: () => mutate(() => { delete s.fit; }) }, t('fill')),
         h('button', { 'aria-selected': s.fit === 'contain', onclick: () => mutate(() => { s.fit = 'contain'; }) }, t('contain'))),
       h('label', { class: 'field' }, h('span', {}, t('zoom')), h('input', { type: 'range', min: 1, max: 4, step: 0.01, value: s.zoom || 1, onchange: (ev) => mutate(() => { s.zoom = Number(ev.target.value); }) })),
+      toneRow(s, (tone, strength) => mutate((p) => ops.setTone(p, e.id, { cover: true }, S.sel.slot, tone, strength))),
       h('button', { class: 'btn small danger', onclick: () => mutate(() => { cd.slots[S.sel.slot] = null; }) }, t('remove'))));
   }
 }
@@ -918,6 +1208,25 @@ function sourcesModal() {
       } catch (e) { colList.innerHTML = ''; colList.append(h('div', { class: 'li', style: { color: 'var(--error)' } }, e.message)); }
     };
     loadCols();
+    const c1 = { collections: [...(src.captureone?.collections || [])], exportFolder: src.captureone?.exportFolder || '', changed: false };
+    const c1List = h('div', { class: 'list' }, h('div', { class: 'li muted' }, src.captureone ? `${src.captureone.document || 'Capture One'}: ${src.captureone.snapshot?.length || 0} ${t('photos')}` : '—'));
+    const loadC1 = async () => {
+      c1List.innerHTML = '<div class="li muted">…</div>';
+      try {
+        const r = await api('/api/captureone/collections', { body: {} });
+        c1List.innerHTML = '';
+        if (!r.collections.length) c1List.append(h('div', { class: 'li muted' }, '—'));
+        for (const c of r.collections) {
+          const cb = h('input', { type: 'checkbox', checked: c1.collections.includes(c.id), onchange: (ev) => { c1.changed = true; c1.collections = ev.target.checked ? [...c1.collections, c.id] : c1.collections.filter((x) => x !== c.id); } });
+          c1List.append(h('label', { class: 'li' }, cb, h('span', { class: 'grow', title: c.path.join(' › ') }, c.path.join(' › ')), h('span', { class: 'tag' }, c.kind), h('span', { class: 'muted num' }, c.count ?? '')));
+        }
+      } catch (e) { c1List.innerHTML = ''; c1List.append(h('div', { class: 'li', style: { color: 'var(--error)' } }, e.message)); }
+    };
+    const saveC1 = async () => {
+      if (!c1.changed) return;
+      const r = await api(`/api/project/${pr.id}/captureone`, { body: { collections: c1.collections, exportFolder: c1.exportFolder || null } });
+      if (r.variants) toast(t('c1Result', { n: r.usable, m: r.needExport }));
+    };
     const prov = findProvider(fmt.provider);
     const saveSources = async () => {
       const clean = { ...src, lightroom: lr.catalog ? lr : undefined };
@@ -937,8 +1246,12 @@ function sourcesModal() {
         h('button', { class: 'btn small', onclick: async () => { try { const r = await api('/api/lightroom/install-plugin', { method: 'POST', body: {} }); toast(t('lrPluginInstalled')); console.log(r); } catch (err) { alert(err.message); } } }, t('lrPlugin'))),
       h('div', { class: 'row muted' }, `${t('importBook')} → `, sel(prov.formats.map((f) => [f.id, f.label[getLang()] || f.label.en]), fmt.format, (v) => { fmt.format = v; })),
       pathField(t('exportFolder'), lr.exportFolder, { hint: t('exportFolderHint'), onChange: (v) => { lr.exportFolder = v; } }),
+      h('h2', { style: { fontSize: '14px' } }, 'Capture One'),
+      h('div', { class: 'row muted small' }, t('c1Hint'), ' ', h('button', { class: 'btn small', type: 'button', onclick: loadC1 }, t('c1Load'))),
+      h('div', { class: 'field' }, h('span', {}, t('collections')), c1List),
+      pathField(t('c1ExportFolder'), c1.exportFolder, { hint: t('c1ExportHint'), onChange: (v) => { c1.exportFolder = v; c1.changed = true; } }),
       h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('cancel')),
-        h('button', { class: 'btn primary', onclick: async () => { await saveSources(); close(); setStatus('…'); await reloadProject({ pool: true }); setStatus(''); } }, t('apply'))),
+        h('button', { class: 'btn primary', onclick: async () => { await saveSources(); try { await saveC1(); } catch (err) { alert(err.message); return; } close(); setStatus('…'); await reloadProject({ pool: true }); setStatus(''); } }, t('apply'))),
     ];
   }, { wide: true });
 }
@@ -1029,7 +1342,7 @@ function editionModal(existing) {
           h('details', {}, h('summary', {}, t('coverDetails')),
             h('div', { class: 'grid3' }, cnum('wrap', `${t('wrap')} (mm)`), cnum('overW', `${t('overW')} (mm)`), cnum('overH', `${t('overH')} (mm)`)),
             h('div', { class: 'grid3' }, cnum('joint', `${t('joint')} (mm)`), cnum('hinge', `${t('hingeZone')} (mm)`),
-              h('label', { class: 'field' }, h('span', {}, t('coverMode')), sel([['spread', t('cmSpread')], ['none', t('cmNone')]], e.cover?.mode || 'spread', (v) => { e.cover = { ...e.cover, mode: v }; }))))),
+              h('label', { class: 'field' }, h('span', {}, t('coverMode')), sel([['spread', t('cmSpread')], ['pages', t('cmPages')], ['none', t('cmNone')]], e.cover?.mode || 'spread', (v) => { e.cover = { ...e.cover, mode: v }; }))))),
         h('fieldset', { class: 'box' }, h('legend', {}, t('interiorFile')),
           h('div', { class: 'grid2' },
             h('label', { class: 'field' }, h('span', {}, t('interiorLayout')), sel([['single', t('ilSingle')], ['spreads', t('ilSpreads')]], e.interior || 'single', (v) => { e.interior = v; draw(); })),
@@ -1046,7 +1359,7 @@ function editionModal(existing) {
           h('label', { class: 'field' }, h('span', {}, t('pageNumbers')), sel([['none', t('pnNone')], ['outer', t('pnOuter')], ['center', t('pnCenter')]], e.pageNumbers || 'none', (v) => { e.pageNumbers = v; })),
           h('label', { class: 'field' }, h('span', {}, t('sharpen')), sel([['none', t('none')], ['low', t('shLow')], ['standard', t('shStandard')], ['high', t('shHigh')]], e.sharpen || 'standard', (v) => { e.sharpen = v; }))),
         h('div', { class: 'grid2' },
-          h('label', { class: 'field' }, h('span', {}, t('font')), sel([['sans', t('sans')], ['serif', t('serif')]], e.font, (v) => { e.font = v; })),
+          h('label', { class: 'field' }, h('span', {}, t('fontLbl')), sel((S.catalog?.families || []).map((f) => [f.id, f.name]), resolveStyle(e, 'body').family, (v) => { e.font = v; })),
           h('label', { class: 'field' }, h('span', {}, t('pageBg')), h('input', { class: 'input', type: 'color', value: e.bg || '#ffffff', onchange: (ev) => { e.bg = ev.target.value; } }))),
         isNew ? h('label', { class: 'field' }, h('span', {}, t('copyFrom')), sel([['', t('emptyEdition')], ...S.project.editions.map((x) => [x.id, x.name])], e.copyFrom, (v) => { e.copyFrom = v; })) : null,
         h('div', { class: 'row' },
@@ -1093,9 +1406,11 @@ function editionModal(existing) {
 }
 
 function autoModal() {
-  const o = { perPage: 3, highlightRating: 5, filter: 'unplaced', minRating: 0, breakHours: 36, replace: false };
+  const o = { perPage: 3, highlightRating: 5, filter: 'unplaced', minRating: 0, breakHours: 36, replace: false, style: 'grid', rightHand: false };
   modal((close) => [
     h('h2', {}, t('autoTitle')),
+    h('label', { class: 'field' }, h('span', {}, t('autoStyle')), sel([['grid', t('autoGrid')], ['monograph', t('autoMono')]], o.style, (v) => { o.style = v; })),
+    h('label', { class: 'row' }, h('input', { type: 'checkbox', onchange: (ev) => { o.rightHand = ev.target.checked; } }), t('autoRightHand')),
     h('div', { class: 'grid2' },
       h('label', { class: 'field' }, h('span', {}, t('perPage')), h('input', { class: 'input num', type: 'number', min: 1, max: 12, value: o.perPage, onchange: (ev) => { o.perPage = Number(ev.target.value); } })),
       h('label', { class: 'field' }, h('span', {}, t('highlight')), sel([[0, t('none')], [3, '★★★'], [4, '★★★★'], [5, '★★★★★']], o.highlightRating, (v) => { o.highlightRating = Number(v); }))),
@@ -1117,47 +1432,328 @@ function autoModal() {
   ]);
 }
 
+// Everything that makes files lives here, grouped by what the file is for. The preflight state
+// sits at the top, so checking comes before printing without a separate wizard.
 function exportModal() {
   const e = ed();
-  const o = { interior: true, cover: true, preview: false, outDir: '' };
+  const o = { parts: new Set(['interior', 'cover']), outDir: '', pages: '', images: { mode: 'spreads', format: 'jpeg', width: 3000 } };
   modal((close) => {
     const prog = h('div', { class: 'progress', style: { display: 'none' } }, h('i'));
     const info = h('div', { class: 'muted' });
     const results = h('div', { class: 'list', style: { display: 'none' } });
+    const label = (part, f) => {
+      if (part === 'interior' || part === 'cover') return `${t(part)} · ${f.size} · ${f.colorMode}`;
+      if (part === 'filelist') return `${t('xFilelist')} · ${f.photos} ${t('photos')}${f.withoutFile ? ` · ${f.withoutFile} ${t('withoutFile')}` : ''}`;
+      if (part === 'package') return `${t('xPackage')} · ${f.photos} ${t('photos')}`;
+      if (part === 'html') return `${t('xHtml')} · ${f.spreads} ${t('spreads')}`;
+      if (part === 'originals') return `${t('xOriginals')} · ${f.copied}${f.skipped?.length ? ` · ${f.skipped.length} ${t('withoutFile')}` : ''}`;
+      return `${t(`x${part[0].toUpperCase()}${part.slice(1)}`)}${f.files ? ` · ${f.files} ${t('files')}` : ''}`;
+    };
     const startBtn = h('button', { class: 'btn primary', onclick: async () => {
-      startBtn.disabled = true; prog.style.display = '';
+      if (!o.parts.size) return;
+      startBtn.disabled = true; prog.style.display = ''; results.innerHTML = ''; results.style.display = 'none';
       if (S.pendingSave) await save();
-      const parts = [o.interior && 'interior', o.cover && 'cover'].filter(Boolean);
-      const job = await api(`/api/project/${S.project.id}/export`, { body: { edition: e.id, parts, preview: o.preview, outDir: o.outDir || undefined } });
+      const job = await api(`/api/project/${S.project.id}/export`, { body: { edition: e.id, parts: [...o.parts], outDir: o.outDir || undefined, images: o.images, lang: getLang(), pages: o.pages || undefined } });
       const poll = async () => {
         const j = await api(`/api/jobs/${job.id}`);
         $('i', prog).style.width = `${j.total ? (j.done / j.total) * 100 : 5}%`;
-        info.textContent = t('exporting', { a: j.done, b: j.total });
+        info.textContent = `${j.step ? `${t(`x${j.step[0].toUpperCase()}${j.step.slice(1)}`)} · ` : ''}${t('exporting', { a: j.done, b: j.total })}`;
         if (j.state === 'running') return setTimeout(poll, 700);
-        if (j.state === 'error') { info.textContent = j.error; startBtn.disabled = false; return; }
+        startBtn.disabled = false;
+        if (j.state === 'error') { info.textContent = j.error; return; }
         info.textContent = t('exportDone');
         results.style.display = '';
-        for (const f of j.files) results.append(h('div', { class: 'li' }, h('span', { class: 'grow', title: f.file }, `${f.part === 'cover' ? t('cover') : t('interior')} · ${f.size} · ${f.colorMode}`),
-          h('button', { class: 'btn small', onclick: () => (window.billerbook?.reveal ? window.billerbook.reveal(f.file) : api('/api/reveal', { body: { path: f.file } })) }, t('reveal'))));
+        for (const f of j.files) {
+          const target = f.file || f.dir || f.csv;
+          results.append(h('div', { class: 'li' }, h('span', { class: 'grow', title: target }, label(f.part, f)),
+            target ? h('button', { class: 'btn small', onclick: () => (window.billerbook?.reveal ? window.billerbook.reveal(target) : api('/api/reveal', { body: { path: target } })) }, t('reveal')) : null));
+        }
       };
       poll();
     } }, t('start'));
     const pf = S.preflight?.warnings || [];
+    const opt = (part, title, hint, extra = null) => h('label', { class: 'export-opt' },
+      h('input', { type: 'checkbox', checked: o.parts.has(part), onchange: (ev) => { ev.target.checked ? o.parts.add(part) : o.parts.delete(part); } }),
+      h('span', {}, title), hint ? h('small', {}, hint) : null, extra);
+    const group = (title, ...kids) => h('div', { class: 'export-group' }, h('h3', {}, title), ...kids);
+    const errs = pf.filter((w) => w.level === 'error').length;
     return [
       h('h2', {}, `${t('exportTitle')} · ${e.name}`),
-      h('div', { class: 'muted num' }, `${e.pages.length} ${t('pages')} · ${e.w} × ${e.h} mm + ${e.bleed} mm ${t('bleed')} · ${e.colorMode === 'cmyk' ? `CMYK${e.icc ? ` (${e.icc.split('/').pop()})` : ''}` : 'RGB'} · ${e.ppi} ppi`),
-      pf.length ? h('div', { style: { color: pf.some((w) => w.level === 'error') ? 'var(--error)' : 'var(--warn)' } }, `${t('preflight')}: ${pf.length}`) : h('div', { class: 'okline' }, `✓ ${t('allGood')}`),
-      h('div', { class: 'row' },
-        h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: true, onchange: (ev) => { o.interior = ev.target.checked; } }), t('interior')),
-        h('label', { class: 'row' }, h('input', { type: 'checkbox', checked: true, onchange: (ev) => { o.cover = ev.target.checked; } }), t('cover'))),
-      h('div', { class: 'seg' },
-        h('button', { 'aria-selected': 'true', onclick: (ev) => { o.preview = false; ev.target.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', b === ev.target)); } }, t('exportPrint')),
-        h('button', { 'aria-selected': 'false', onclick: (ev) => { o.preview = true; ev.target.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', b === ev.target)); } }, t('exportPreview'))),
+      h('div', { class: 'muted num' }, `${e.pages.length} ${t('pages')} · ${e.w} × ${e.h} mm + ${e.bleed} mm ${t('bleed')} · ${e.colorMode === 'cmyk' ? `CMYK${e.icc ? ` (${e.icc.split('/').pop()})` : ''}` : 'RGB'} · ${e.ppi} ppi · ${findProvider(e.provider).name}`),
+      pf.length ? h('div', { style: { color: errs ? 'var(--error)' : 'var(--warn)' } }, `${t('preflight')}: ${errs} ${t('errors')}, ${pf.length - errs} ${t('warnings')} – ${t('proofHint')}`) : h('div', { class: 'okline' }, `✓ ${t('allGood')}`),
+      h('div', { class: 'export-cols' }, h('div', {}, group(t('xgPrint'),
+        opt('interior', t('interior'), t(e.interior === 'spreads' ? 'xInteriorSpreads' : 'xInteriorSingle')),
+        e.cover?.mode !== 'none' ? opt('cover', t('cover'), t('xCoverHint')) : null),
+      group(t('xgCheck'),
+        opt('proof', t('xProof'), t('xProofHint')),
+        opt('overview', t('xOverview'), t('xOverviewHint')),
+        h('small', { class: 'muted' }, t('xSoftproofHint')))),
+      h('div', {}, group(t('xgShare'),
+        opt('screen', t('xScreen'), t('xScreenHint')),
+        opt('images', t('xImages'), t('xImagesHint'), h('div', { class: 'row compact', style: { gridColumn: 2 } },
+          sel([['spreads', t('spreads')], ['pages', t('pages')]], o.images.mode, (v) => { o.images.mode = v; }),
+          sel([['jpeg', 'JPEG'], ['png', 'PNG']], o.images.format, (v) => { o.images.format = v; }),
+          sel([[2000, '2000 px'], [3000, '3000 px'], [5000, '5000 px']], o.images.width, (v) => { o.images.width = Number(v); }))),
+        opt('carousel', t('xCarousel'), t('xCarouselHint')),
+        opt('html', t('xHtml'), t('xHtmlHint')),
+        opt('epub', t('xEpub'), t('xEpubHint')),
+        opt('cbz', t('xCbz'), t('xCbzHint')),
+        opt('idml', t('xIdml'), t('xIdmlHint'))),
+      group(t('xgFiles'),
+        opt('filelist', t('xFilelist'), t('xFilelistHint')),
+        opt('originals', t('xOriginals'), t('xOriginalsHint')),
+        opt('package', t('xPackage'), t('xPackageHint'))))),
+      h('label', { class: 'field' }, h('span', {}, t('xPages')), h('input', { class: 'input num', placeholder: t('xPagesAll'), oninput: (ev) => { o.pages = ev.target.value.trim(); } }), h('small', { class: 'muted' }, t('xPagesHint'))),
       pathField(t('exportTo'), '', { onChange: (v) => { o.outDir = v; }, hint: '~/Desktop/Billerbook-Export' }),
       prog, info, results,
       h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('close')), startBtn),
     ];
+  }, { wide: true });
+}
+
+// Soft proof: every photo through the printer's CMYK profile. Shift/Alt adds the gamut warning.
+function toggleProof(gamut = false) {
+  if (gamut && S.proof) S.gamut = !S.gamut;
+  else { S.proof = !S.proof; S.gamut = S.proof && gamut; }
+  renderTop(); renderStage(); renderStrip();
+  if (S.proof) toast(t(S.gamut ? 'proofOnGamut' : 'proofOn', { profile: ed().icc ? ed().icc.split('/').pop() : t('genericCmyk') }));
+}
+
+// ---------- import: PDF, web page / HTML, Billerbook project file ----------
+function importModal() {
+  const e = ed();
+  modal((close) => {
+    const info = h('div', { class: 'muted', 'aria-live': 'polite' });
+    const o = { pdfMode: 'elements', url: '', newEdition: false };
+    const pdfInput = h('input', { type: 'file', accept: 'application/pdf,.pdf', class: 'input' });
+    return [
+      h('h2', {}, t('import')),
+      h('div', { class: 'export-group' }, h('h3', {}, 'PDF'),
+        h('p', { class: 'muted' }, t('impPdfHint')),
+        pdfInput,
+        h('div', { class: 'seg' },
+          h('button', { 'aria-selected': 'true', onclick: (ev) => { o.pdfMode = 'elements'; ev.target.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', b === ev.target)); } }, t('impPdfElements')),
+          h('button', { 'aria-selected': 'false', onclick: (ev) => { o.pdfMode = 'page'; ev.target.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', b === ev.target)); } }, t('impPdfPages'))),
+        h('button', { class: 'btn primary', onclick: async () => {
+          const f = pdfInput.files?.[0];
+          if (!f) return toast(t('impChoosePdf'));
+          try { const n = await importPdf(f, o.pdfMode, (msg) => { info.textContent = msg; }); toast(t('impDone', { n })); close(); } catch (err) { info.textContent = err.message; }
+        } }, t('impPdfStart'))),
+      h('div', { class: 'export-group' }, h('h3', {}, t('impWeb')),
+        h('p', { class: 'muted' }, t('impWebHint')),
+        h('div', { class: 'row', style: { flexWrap: 'nowrap' } },
+          h('input', { class: 'input grow', placeholder: 'https://… / ~/…/page.html', oninput: (ev) => { o.url = ev.target.value.trim(); } }),
+          h('button', { class: 'btn', onclick: async () => { const pth = await pickPath('file', 'HTML'); if (pth) { o.url = pth; info.textContent = pth; } } }, t('choose'))),
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', onchange: (ev) => { o.newEdition = ev.target.checked; } }), ' ', t('impNewEdition')),
+        h('button', { class: 'btn primary', onclick: async () => {
+          if (!o.url) return;
+          info.textContent = t('impLoading');
+          try {
+            if (S.pendingSave) await save();
+            const r = await api(`/api/project/${S.project.id}/import-html`, { body: { source: o.url, edition: e.id, newEdition: o.newEdition || undefined } });
+            await reloadProject({ pool: true });
+            if (o.newEdition) S.ed = S.project.editions.findIndex((x) => x.id === r.edition);
+            renderAll();
+            toast(t('impWebDone', { pages: r.pages, photos: r.photos }) + (r.failed ? ` · ${r.failed} ${t('impFailed')}` : ''));
+            close();
+          } catch (err) { info.textContent = err.message; }
+        } }, t('impWebStart'))),
+      h('div', { class: 'export-group' }, h('h3', {}, t('impProject')),
+        h('p', { class: 'muted' }, t('impProjectHint')),
+        h('button', { class: 'btn', onclick: async () => {
+          const pth = await pickPath('file', '.billerbook');
+          if (!pth) return;
+          try { const r = await api('/api/projects/import', { body: { path: pth } }); close(); await openProject(r.id); } catch (err) { info.textContent = err.message; }
+        } }, t('impProjectOpen'))),
+      info,
+      h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('close'))),
+    ];
+  }, { wide: true });
+}
+
+// PDF pages into book pages. "elements": photos and text blocks become free frames you can move;
+// "page": every PDF page becomes one image. PDF.js runs here in the app; nothing is uploaded anywhere.
+async function importPdf(file, mode, say) {
+  const pdfjs = await import('/vendor/pdfjs/pdf.min.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, disableFontFace: true }).promise;
+  const e = ed();
+  const base = file.name.replace(/\.pdf$/i, '').replace(/[^\w.-]+/g, '-').slice(0, 40);
+  const upload = async (blob, name) => (await api(`/api/project/${S.project.id}/upload?name=${encodeURIComponent(name)}`, { method: 'PUT', body: blob, raw: true })).key;
+  const toBlob = (canvas, type = 'image/jpeg') => new Promise((r) => canvas.toBlob(r, type, 0.92));
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    say(t('impPdfPage', { a: n, b: doc.numPages }));
+    const page = await doc.getPage(n);
+    const vp1 = page.getViewport({ scale: 1 });
+    const scale = Math.min(4000 / Math.max(vp1.width, vp1.height), 300 / 72);
+    const vp = page.getViewport({ scale });
+    if (mode === 'page') {
+      const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+      const key = await upload(await toBlob(c), `${base}-${String(n).padStart(3, '0')}.jpg`);
+      pages.push({ layout: 'voll', slots: [{ key, fit: 'contain' }], texts: [] });
+      continue;
+    }
+    // Elements: walk the drawing operations, keep each image with its position.
+    const ops = await page.getOperatorList();
+    const OPS = pdfjs.OPS;
+    let ctm = [1, 0, 0, 1, 0, 0];
+    const stack = [];
+    const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
+    const frames = [], slots = [], texts = [];
+    const W = vp1.width, H = vp1.height;
+    for (let i = 0; i < ops.fnArray.length; i++) {
+      const fn = ops.fnArray[i], args = ops.argsArray[i];
+      if (fn === OPS.save) stack.push(ctm);
+      else if (fn === OPS.restore) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+      else if (fn === OPS.transform) ctm = mul(ctm, args);
+      else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject) {
+        const obj = fn === OPS.paintInlineImageXObject ? args[0] : await new Promise((res) => { const id = args[0]; (id.startsWith('g_') ? page.commonObjs : page.objs).get(id, res); });
+        if (!obj) continue;
+        const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]], ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
+        const x0 = Math.max(0, Math.min(...xs)), x1 = Math.min(W, Math.max(...xs)), y0 = Math.max(0, Math.min(...ys)), y1 = Math.min(H, Math.max(...ys));
+        if (x1 - x0 < W * 0.03 || y1 - y0 < H * 0.03) continue; // icons and rules
+        const c = document.createElement('canvas'); c.width = obj.width; c.height = obj.height;
+        const g = c.getContext('2d');
+        if (obj.bitmap) g.drawImage(obj.bitmap, 0, 0);
+        else if (obj.data) {
+          const id = g.createImageData(obj.width, obj.height);
+          const px = obj.width * obj.height;
+          if (obj.data.length === px * 4) id.data.set(obj.data);
+          else if (obj.data.length === px * 3) for (let k = 0; k < px; k++) { id.data[k * 4] = obj.data[k * 3]; id.data[k * 4 + 1] = obj.data[k * 3 + 1]; id.data[k * 4 + 2] = obj.data[k * 3 + 2]; id.data[k * 4 + 3] = 255; }
+          else continue;
+          g.putImageData(id, 0, 0);
+        } else continue;
+        // The image is drawn upside down in PDF space when the matrix flips it; mirror back.
+        if (ctm[3] < 0) { const f = document.createElement('canvas'); f.width = c.width; f.height = c.height; const fg = f.getContext('2d'); fg.translate(0, c.height); fg.scale(1, -1); fg.drawImage(c, 0, 0); c.getContext('2d').clearRect(0, 0, c.width, c.height); c.getContext('2d').drawImage(f, 0, 0); }
+        const key = await upload(await toBlob(c), `${base}-${String(n).padStart(3, '0')}-${slots.length + 1}.jpg`);
+        frames.push({ kind: 'image', x: x0 / W, y: 1 - y1 / H, w: (x1 - x0) / W, h: (y1 - y0) / H });
+        slots.push({ key, fit: 'fill' });
+      }
+    }
+    // Text: lines from PDF.js, joined into blocks by position.
+    const tc = await page.getTextContent();
+    const lines = [];
+    for (const it of tc.items) {
+      if (!it.str?.trim()) continue;
+      const size = Math.hypot(it.transform[2], it.transform[3]) || it.height || 10;
+      const x = it.transform[4], yTop = H - it.transform[5] - size;
+      const last = lines[lines.length - 1];
+      if (last && Math.abs(last.yTop - yTop) < size * 0.4 && x >= last.x) { last.text += (x - last.x1 > size * 0.2 ? ' ' : '') + it.str; last.x1 = x + it.width; last.w = last.x1 - last.x; }
+      else lines.push({ text: it.str, x, x1: x + it.width, w: it.width, yTop, size });
+    }
+    const blocks = [];
+    for (const l of lines) {
+      const b = blocks[blocks.length - 1];
+      if (b && Math.abs(b.size - l.size) < 0.6 && l.yTop - b.yBottom < l.size * 1.1 && Math.abs(l.x - b.x) < l.size * 3) { b.text += `\n${l.text}`; b.yBottom = l.yTop + l.size * 1.2; b.w = Math.max(b.w, l.x1 - b.x); }
+      else blocks.push({ text: l.text, x: l.x, yTop: l.yTop, yBottom: l.yTop + l.size * 1.2, w: l.w, size: l.size });
+    }
+    for (const b of blocks) {
+      frames.push({ kind: 'text', role: 'body', x: b.x / W, y: b.yTop / H, w: Math.min(1 - b.x / W, (b.w / W) * 1.08 + 0.01), h: Math.min(1 - b.yTop / H, (b.yBottom - b.yTop) / H + 0.01) });
+      // Point size relative to the book page, so the text keeps its proportion to the page.
+      texts.push({ value: b.text, size: Math.round(b.size * ((e.w / 25.4) * 72 / W) * 10) / 10 });
+    }
+    pages.push(frames.length ? { layout: 'frei', frames, slots, texts } : { layout: 'leer', slots: [], texts: [] });
+  }
+  await loadPool(true);
+  const at = (currentPage() ?? -1) + 1;
+  mutate((pr) => {
+    const ed2 = pr.editions[S.ed];
+    ed2.pages.splice(at, 0, ...pages.map((x) => ({ ...ops.newPage(x.layout, x.slots), frames: x.frames, texts: x.texts })));
+    ops.normalize(ed2);
   });
+  return pages.length;
+}
+
+// Book templates with a live preview made from this project's own photos.
+function templatesModal() {
+  const e = ed();
+  const list = S.catalog?.templates || TEMPLATES;
+  let pick = e.template || list[0].id;
+  modal((close) => {
+    const prevCover = h('img', { class: 'tpl-prev cover', alt: '' });
+    const prevSpread = h('img', { class: 'tpl-prev', alt: '' });
+    const about = h('p', { class: 'muted' });
+    const cards = h('div', { class: 'tpl-list' });
+    const show = () => {
+      const tp = list.find((x) => x.id === pick);
+      about.textContent = nameOf({ name: tp.about });
+      const base = `/api/project/${S.project.id}/template-preview.jpg?edition=${e.id}&template=${tp.id}&lang=${getLang()}`;
+      prevCover.src = `${base}&what=cover&w=900`;
+      prevSpread.src = `${base}&what=spread1&w=900`;
+      cards.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === pick)));
+    };
+    for (const tp of list) {
+      cards.append(h('button', { class: 'tpl-card', 'data-id': tp.id, onclick: () => { pick = tp.id; show(); } },
+        h('span', { class: 'tpl-swatch', style: { background: tp.cover.bg } }, h('i', { style: { background: tp.page.bg } })),
+        h('span', { style: { fontFamily: cssFamily({ family: tp.font }) } }, nameOf(tp))));
+    }
+    setTimeout(show);
+    const apply = async (relayout) => {
+      if (relayout && e.pages.length && !confirm(t('tplRelayoutConfirm'))) return;
+      if (S.pendingSave) await save();
+      const r = await api(`/api/project/${S.project.id}/op`, { body: { op: 'applyTemplate', args: { edition: e.id, template: pick, relayout, lang: getLang() } } });
+      S.hist.push(snapshot()); S.project = r.project; changed();
+      toast(t('tplApplied', { name: nameOf(list.find((x) => x.id === pick)) }));
+      close();
+    };
+    return [
+      h('h2', {}, t('templates')),
+      h('div', { class: 'tpl-grid' }, cards, h('div', { class: 'tpl-view' }, h('div', { class: 'tpl-imgs' }, prevCover, prevSpread), about, h('small', { class: 'muted' }, t('tplPreviewNote')))),
+      h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('cancel')),
+        h('button', { class: 'btn', onclick: () => apply(false) }, t('tplStyleOnly')),
+        h('button', { class: 'btn primary', onclick: () => apply(true) }, t('tplApply'))),
+    ];
+  }, { wide: true });
+}
+
+// Connect an AI assistant: Claude Desktop in one click, local tools by command or URL,
+// ChatGPT and claude.ai through a public address with OAuth and a pairing code.
+function connectModal() {
+  modal((close) => {
+    const box = h('div', { class: 'connect' });
+    const copy = (txt) => h('button', { class: 'btn small', onclick: () => { navigator.clipboard?.writeText(txt); toast(t('copied')); } }, t('copy'));
+    const codeLine = (txt) => h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, h('code', { class: 'code grow' }, txt), copy(txt));
+    const draw = async () => {
+      const st = await api('/api/remote');
+      const cmd = [st.stdio.command, ...st.stdio.args].map((x) => (/\s/.test(x) ? `"${x}"` : x)).join(' ');
+      const envPrefix = st.stdio.env ? Object.entries(st.stdio.env).map(([k, v]) => `${k}=${v}`).join(' ') + ' ' : '';
+      const remoteUrl = st.publicUrl ? `${st.publicUrl}/mcp` : null;
+      box.innerHTML = '';
+      box.append(
+        h('div', { class: 'export-group' }, h('h3', {}, 'Claude Desktop'),
+          h('p', { class: 'muted' }, t('ccDesktop')),
+          h('button', { class: 'btn primary', onclick: async () => { try { const r = await api('/api/connect/claude-desktop', { body: {} }); toast(t('ccDesktopDone')); void r; } catch (e) { toast(e.message); } } }, t('ccDesktopBtn'))),
+        h('div', { class: 'export-group' }, h('h3', {}, 'Claude Code · Codex · Cursor'),
+          h('p', { class: 'muted' }, t('ccLocal')),
+          codeLine(`claude mcp add --transport http billerbook ${st.local}`),
+          codeLine(`${envPrefix}${cmd}`),
+          h('small', { class: 'muted' }, t('ccLocalHint'))),
+        h('div', { class: 'export-group' }, h('h3', {}, 'ChatGPT · claude.ai'),
+          h('p', { class: 'muted' }, t('ccRemote')),
+          remoteUrl ? codeLine(remoteUrl) : null,
+          h('div', { class: 'row' },
+            st.tunnel ? h('button', { class: 'btn', onclick: async () => { await api('/api/remote/tunnel', { body: { action: 'stop' } }); draw(); } }, t('ccTunnelStop'))
+              : h('button', { class: 'btn', disabled: st.cloudflared ? null : true, onclick: async (ev) => { ev.target.disabled = true; ev.target.textContent = '…'; try { await api('/api/remote/tunnel', { body: { action: 'start' } }); } catch (e) { toast(e.message); } draw(); } }, t('ccTunnelStart')),
+            h('button', { class: 'btn', onclick: async () => { const u = prompt(t('ccOwnUrl'), st.publicUrl || 'https://'); if (u != null) { try { await api('/api/remote/url', { body: { url: u.trim() || null } }); } catch (e) { toast(e.message); } draw(); } } }, t('ccOwnUrlBtn'))),
+          !st.cloudflared ? h('small', { class: 'muted' }, t('ccNoCloudflared')) : null,
+          remoteUrl ? h('div', {}, h('p', { class: 'muted' }, t('ccPairHint')),
+            h('button', { class: 'btn primary', onclick: async () => {
+              try { const r = await api('/api/remote/pair', { body: {} }); pairOut.textContent = r.code.replace(/(\d{3})(\d{3})/, '$1 $2'); } catch (err) {
+                // Locked after too many wrong codes from outside: the user can unlock with a confirmation here.
+                if (err.status === 423 && confirm(t('ccUnlock'))) { const r = await api('/api/remote/pair', { body: { unlock: true } }); pairOut.textContent = r.code.replace(/(\d{3})(\d{3})/, '$1 $2'); }
+                else pairOut.textContent = err.message;
+              } } }, t('ccPair')),
+            pairOut) : null,
+          st.connections.length ? h('div', { class: 'list' }, ...st.connections.map((c) => h('div', { class: 'li' }, h('span', { class: 'grow' }, `${c.name}${c.active ? '' : ` (${t('ccInactive')})`}`),
+            h('button', { class: 'btn small danger', onclick: async () => { await api('/api/remote/revoke', { body: { id: c.id } }); draw(); } }, t('ccRevoke'))))) : null),
+      );
+    };
+    const pairOut = h('div', { class: 'pair-code num', 'aria-live': 'polite' });
+    draw();
+    return [h('h2', {}, t('connectAi')), box, h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('close')))];
+  }, { wide: true });
 }
 
 function helpModal() {
@@ -1165,8 +1761,10 @@ function helpModal() {
   modal((close) => [
     h('h2', {}, t('shortcuts')),
     h('div', { class: 'keys' }, STRINGS[getLang()].keys.flatMap(([k, d]) => [h('kbd', {}, k), h('span', {}, d)])),
-    h('h2', { style: { fontSize: '14px' } }, t('mcp')), h('p', { class: 'muted', style: { margin: 0 } }, t('mcpText')), h('pre', { class: 'code' }, cfg),
+    h('h2', { style: { fontSize: '14px' } }, t('mcp')), h('p', { class: 'muted', style: { margin: 0 } }, t('mcpText')),
+    h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => { close(); connectModal(); } }, `${t('connectAi')}…`)), h('pre', { class: 'code' }, cfg),
     h('div', { class: 'row' }, h('span', { class: 'muted' }, t('language')), sel([['de', 'Deutsch'], ['en', 'English']], getLang(), (v) => { setLang(v); document.documentElement.lang = v; renderAll(); close(); helpModal(); })),
+    h('div', { class: 'row' }, h('span', { class: 'muted' }, t('theme')), sel([['system', t('themeSystem')], ['light', t('themeLight')], ['dark', t('themeDark')]], getTheme(), (v) => setTheme(v))),
     h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('close'))),
   ]);
 }
@@ -1179,6 +1777,9 @@ function bindGlobal() {
   $('#projBtn').onclick = () => projectsModal();
   $('#autoBtn').onclick = () => autoModal();
   $('#exportBtn').onclick = () => exportModal();
+  $('#proofBtn').onclick = (ev) => toggleProof(ev.altKey);
+  $('#aiBtn').onclick = () => connectModal();
+  $('#tplBtn').onclick = () => templatesModal();
   $('#helpBtn').onclick = () => helpModal();
   document.addEventListener('keydown', (ev) => {
     if (!S.project || $('#modal-root').children.length) return;
@@ -1194,6 +1795,7 @@ function bindGlobal() {
       if (k === 'v' && ev.shiftKey && S.layoutClip != null) { ev.preventDefault(); return mutate((p) => ops.copyLayout(p, e.id, S.layoutClip, [own.owner])); }
     }
     if (mod) return;
+    if (ev.key === 'p' || ev.key === 'P') return toggleProof(ev.shiftKey);
     if (ev.key === 'ArrowLeft') return go(-1);
     if (ev.key === 'ArrowRight') return go(1);
     const sl = S.sel?.kind === 'page' ? S.sel : null;

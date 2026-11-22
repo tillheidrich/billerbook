@@ -36,6 +36,20 @@ const splitRows = (b, fr, g) => {
   return fr.map((f) => { const h = (avail * f) / tot; const r = { x: b.x, y, w: b.w, h }; y += h + g; return r; });
 };
 const asImg = (r) => img(r.x, r.y, r.w, r.h);
+
+// Van de Graaf / Tschichold canon: inner : top : outer : bottom = 1 : 1 : 2 : 2 in ninths of the page.
+// The resulting block is the classic place for a plate (single photo) or a text block in a book.
+function canonBox(W, H, side) {
+  const inner = W / 9, outer = (2 * W) / 9, top = H / 9, bottom = (2 * H) / 9;
+  const x = side === 'L' ? outer : inner;
+  return { x, y: top, w: W - inner - outer, h: H - top - bottom };
+}
+// Photo fitted into a box, sitting on the box's optical centre (a little above the middle).
+function plate(aspect, b, scale = 1, lift = 0.04) {
+  const f = fit(aspect, b, scale);
+  f.y = Math.max(b.y, f.y - b.h * lift);
+  return f;
+}
 const landscape = (c) => c.W >= c.H;
 
 // Justified layout: keeps every photo's aspect ratio, tries all row and column splits.
@@ -156,6 +170,47 @@ export const LAYOUTS = {
   },
   'sechs-raster': { group: 'single', slots: 6, build: (c) => (landscape(c) ? grid(contentBox(c), 3, 2, c.g) : grid(contentBox(c), 2, 3, c.g)) },
   'neun-kontakt': { group: 'single', slots: 9, build: (c) => grid(contentBox(c), 3, 3, c.g) },
+  // Photo-book (monograph) layouts: built from the canon and conventions of printed photo books.
+  tafel: {
+    group: 'single', family: 'monograph', slots: 1,
+    build: (c) => [plate(c.aspects[0], canonBox(c.W, c.H, c.side))],
+  },
+  'tafel-legende': {
+    group: 'single', family: 'monograph', slots: 1,
+    build: (c) => {
+      const b = canonBox(c.W, c.H, c.side);
+      const f = plate(c.aspects[0], { ...b, h: b.h * 0.9 }, 1, 0);
+      return [f, txt(f.x, f.y + f.h + Math.max(3, c.g), Math.max(f.w, 40), Math.max(8, c.H / 18), 'caption')];
+    },
+  },
+  atem: {
+    group: 'single', family: 'monograph', slots: 1,
+    build: (c) => {
+      const w = Math.min(c.W, c.H) * 0.36;
+      const a = c.aspects[0] || 1.5;
+      const ww = a >= 1 ? w : w * a, hh = ww / a;
+      return [img((c.W - ww) / 2, c.H * 0.45 - hh / 2, ww, hh)];
+    },
+  },
+  'atem-ecke': {
+    group: 'single', family: 'monograph', slots: 1,
+    build: (c) => {
+      const b = canonBox(c.W, c.H, c.side);
+      const a = c.aspects[0] || 1.5;
+      const ww = Math.min(b.w * 0.42, (b.h * 0.42) * a), hh = ww / a;
+      const x = c.side === 'L' ? b.x : b.x + b.w - ww;
+      return [img(x, b.y + b.h - hh, ww, hh)];
+    },
+  },
+  'text-kanon': {
+    group: 'text', family: 'monograph', slots: 0,
+    build: (c) => { const b = canonBox(c.W, c.H, c.side); return [txt(b.x, b.y, b.w, b.h * 0.12, 'title'), txt(b.x, b.y + b.h * 0.16, b.w, b.h * 0.84, 'body')]; },
+  },
+  // Chapter opener: large word (month, place) low on the canon block, a short line under it.
+  kapitel: {
+    group: 'text', family: 'monograph', slots: 0,
+    build: (c) => { const b = canonBox(c.W, c.H, c.side); return [txt(b.x, b.y + b.h * 0.58, b.w, b.h * 0.24, 'chapter'), txt(b.x, b.y + b.h * 0.84, b.w * 0.8, b.h * 0.16, 'caption')]; },
+  },
   text: {
     group: 'text', slots: 0,
     build: (c) => { const b = contentBox(c); return [txt(b.x, b.y + b.h * 0.3, b.w, b.h * 0.14, 'title'), txt(b.x, b.y + b.h * 0.46, b.w, b.h * 0.4, 'body')]; },
@@ -188,6 +243,39 @@ export const LAYOUTS = {
       return [img(0, 0, pw, c.H), ...grid({ x: pw + c.mi, y: c.m, w: pw - c.mi - c.m, h: c.H - 2 * c.m }, 2, 2, c.g)];
     },
   },
+  // Spread: empty left page with a caption at the foot, plate on the right (the classic monograph spread).
+  'dps-tafel-rechts': {
+    group: 'spread', family: 'monograph', slots: 1,
+    build: (c) => {
+      const pw = c.W / 2;
+      const b = canonBox(pw, c.H, 'R');
+      const f = plate(c.aspects[0], { ...b, x: pw + b.x });
+      const lb = canonBox(pw, c.H, 'L');
+      return [f, txt(lb.x, lb.y + lb.h - Math.max(10, c.H / 16), lb.w * 0.7, Math.max(10, c.H / 16), 'caption')];
+    },
+  },
+  // Spread: two photos at the same height on a shared line, mirrored margins (diptych).
+  'dps-diptychon': {
+    group: 'spread', family: 'monograph', slots: 2,
+    build: (c) => {
+      const pw = c.W / 2;
+      const L = canonBox(pw, c.H, 'L'), R = canonBox(pw, c.H, 'R');
+      const a1 = c.aspects[0] || 1.5, a2 = c.aspects[1] || 1.5;
+      const h = Math.min(L.h * 0.8, L.w / a1, R.w / a2);
+      const y = c.H * 0.45 - h / 2;
+      const w1 = h * a1, w2 = h * a2;
+      return [img(pw - (c.mi + c.g) - w1, y, w1, h), img(pw + c.mi + c.g, y, w2, h)];
+    },
+  },
+  // Spread: left page full bleed, right page white with a caption (pause after a loud image).
+  'dps-randlos-weiss': {
+    group: 'spread', family: 'monograph', slots: 1,
+    build: (c) => {
+      const pw = c.W / 2;
+      const rb = canonBox(pw, c.H, 'R');
+      return [img(0, 0, pw, c.H), txt(pw + rb.x, rb.y + rb.h - Math.max(10, c.H / 16), rb.w * 0.7, Math.max(10, c.H / 16), 'caption')];
+    },
+  },
   'dps-auto': {
     group: 'spread', slots: 'auto',
     build: (c) => {
@@ -204,7 +292,9 @@ export const LAYOUT_ORDER = [
   'auto', 'voll', 'passepartout', 'einzeln', 'galerie', 'bild-text', 'halb-text',
   'zwei-a', 'zwei-b', 'zwei-randlos', 'drei-gross', 'drei-reihe', 'vier-raster', 'vier-eins-drei',
   'sechs-raster', 'neun-kontakt', 'text', 'leer',
+  'tafel', 'tafel-legende', 'atem', 'atem-ecke', 'text-kanon', 'kapitel',
   'dps-voll', 'dps-streifen', 'dps-voll-zwei', 'dps-voll-raster', 'dps-auto',
+  'dps-tafel-rechts', 'dps-diptychon', 'dps-randlos-weiss',
 ];
 
 export const isSpreadLayout = (id) => LAYOUTS[id]?.group === 'spread' || (id === 'frei-dps');
@@ -279,7 +369,49 @@ export const COVER_LAYOUTS = {
       txt(cs.spine.x, cs.visible.y + 15, cs.spine.w, cs.visible.h - 30, 'spine')],
   },
 };
-export const COVER_ORDER = ['cover-front', 'cover-wrap', 'cover-passepartout', 'cover-front-back'];
+// Front-panel helpers for the template covers.
+const front = (cs) => ({ x: cs.front.x, y: cs.visible.y, w: cs.front.w, h: cs.visible.h });
+const spineTxt = (cs) => txt(cs.spine.x, cs.visible.y + 15, cs.spine.w, cs.visible.h - 30, 'spine');
+const backTxt = (cs) => txt(cs.back.x + cs.back.w * 0.12, cs.visible.y + cs.visible.h * 0.62, cs.back.w * 0.62, cs.visible.h * 0.2, 'back');
+Object.assign(COVER_LAYOUTS, {
+  // Photo as a plate in the canon block of the front, title set below its left edge.
+  'cover-plate': {
+    slots: 1,
+    build: (cs) => {
+      const f = front(cs);
+      const b = { x: f.x + f.w / 9, y: f.y + f.h / 9, w: (f.w * 6) / 9, h: (f.h * 5.2) / 9 };
+      return [img(b.x, b.y, b.w, b.h), txt(b.x, b.y + b.h + f.h * 0.045, b.w, f.h * 0.14, 'cover'), spineTxt(cs), backTxt(cs)];
+    },
+  },
+  // Full-bleed front photo, title low on the left over the photo (template sets it white).
+  'cover-year': {
+    slots: 1,
+    build: (cs) => {
+      const f = front(cs);
+      return [img(cs.front.x, 0, cs.front.w + cs.bleed, cs.H), txt(f.x + f.w * 0.09, f.y + f.h * 0.7, f.w * 0.8, f.h * 0.2, 'cover'), spineTxt(cs), backTxt(cs)];
+    },
+  },
+  // Small photo high on the outer side, title low on the inner side: lots of cover material shows.
+  'cover-minimal': {
+    slots: 1,
+    build: (cs) => {
+      const f = front(cs);
+      const w = f.w * 0.42;
+      return [img(f.x + f.w - f.w / 9 - w, f.y + f.h / 9, w, w * 1.25), txt(f.x + f.w / 9, f.y + f.h * 0.74, f.w * 0.6, f.h * 0.16, 'cover'), spineTxt(cs), backTxt(cs)];
+    },
+  },
+  // Type only on the front; a small plate on the back.
+  'cover-typo': {
+    slots: 1,
+    build: (cs) => {
+      const f = front(cs);
+      const bk = { x: cs.back.x, y: cs.visible.y, w: cs.back.w, h: cs.visible.h };
+      const pw = bk.w * 0.36;
+      return [img(bk.x + (bk.w - pw) / 2, bk.y + bk.h * 0.2, pw, pw * 0.8), txt(f.x + f.w / 9, f.y + f.h * 0.16, f.w * 0.74, f.h * 0.4, 'cover'), spineTxt(cs)];
+    },
+  },
+});
+export const COVER_ORDER = ['cover-front', 'cover-wrap', 'cover-passepartout', 'cover-front-back', 'cover-plate', 'cover-year', 'cover-minimal', 'cover-typo'];
 
 export function coverFrames(ed, aspectOf = () => null) {
   const cs = coverSpec(ed);
@@ -309,7 +441,7 @@ export function pageNumberFor(ed, i) {
   const p = ed.pages[i];
   const own = pageOwner(ed, i);
   if (own.spread) return null;
-  if (p && (p.hideNumber || ['voll', 'zwei-randlos', 'halb-text', 'leer'].includes(p.layout))) return null;
+  if (p && (p.hideNumber || ['voll', 'zwei-randlos', 'halb-text', 'leer', 'atem', 'kapitel'].includes(p.layout))) return null;
   const side = i % 2 === 1 ? 'L' : 'R';
   const y = ed.h - Math.max(6, (ed.safety || 5) + 1);
   const m = Math.max(ed.margin ?? 12, (ed.safety || 5) + 2);

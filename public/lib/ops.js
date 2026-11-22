@@ -5,6 +5,8 @@ import { editionSpecFrom } from './providers.js';
 import { LAYOUTS, slotCount, isSpreadPage, buildFrames, pageOwner, coverFrames, alternativesFor } from './layouts.js';
 import { placement, spineOf } from './geometry.js';
 
+import { STYLE_KEYS, STYLE_PRESETS, ROLES } from './text.js';
+import { findTemplate } from './templates.js';
 export const rid = () => Math.random().toString(36).slice(2, 10);
 const EDITION_COLORS = ['#e0a458', '#6aa9e9', '#8fcb7a', '#d77fb3', '#b59cf0', '#e9776a'];
 
@@ -25,7 +27,9 @@ export function addEdition(project, opts = {}) {
     if (src) {
       ed.pages = structuredClone(src.pages).map((p) => ({ ...p, id: rid() }));
       ed.coverDesign = structuredClone(src.coverDesign);
-      for (const k of ['margin', 'gutter', 'gap', 'font', 'bg', 'colorMode', 'icc', 'ppi']) ed[k] = src[k];
+      for (const k of ['margin', 'gutter', 'gap', 'font', 'bg', 'ppi']) ed[k] = src[k];
+      // Colour settings only carry over when both printers want the same colour space.
+      if ((src.colourWanted || 'cmyk') === ed.colourWanted) { ed.colorMode = src.colorMode; ed.icc = src.icc; }
       // Imported free layouts only scale proportionally. When the page shape changes,
       // switch them to the closest built-in layout so photos are not cropped oddly.
       if (Math.abs(Math.log((src.w / src.h) / (ed.w / ed.h))) > 0.1) for (const p of ed.pages) convertFreePage(p);
@@ -74,7 +78,7 @@ export function updateEdition(project, edId, patch) {
   }
   const allowed = ['name', 'w', 'h', 'binding', 'bleed', 'safety', 'glue', 'cover', 'spine', 'spinePerPage', 'pageStep',
     'margin', 'gutter', 'gap', 'ppi', 'colorMode', 'icc', 'font', 'bg', 'color', 'pageNumbers', 'sharpen',
-    'interior', 'blankEnds', 'pageMin', 'pageMax', 'colourWanted', 'spineTextMin', 'spineRule', 'coverTemplate', 'cellPadding', 'bgPhoto', 'guides', 'textStyle'];
+    'interior', 'blankEnds', 'pageMin', 'pageMax', 'colourWanted', 'spineTextMin', 'spineRule', 'coverTemplate', 'cellPadding', 'bgPhoto', 'guides', 'textStyle', 'textStyles', 'layoutGrid'];
   for (const k of allowed) if (k in patch && !['provider', 'format'].includes(k)) ed[k] = patch[k];
   normalize(ed);
   return ed;
@@ -204,8 +208,10 @@ export function swapSlots(project, edId, a, b) {
     normalize(ed);
     return;
   }
-  pa.slots[a.slot] = sb ? { key: sb.key } : null;
-  pb.slots[b.slot] = sa ? { key: sa.key } : null;
+  // The tone belongs to the photo, the crop to the frame.
+  const carry = (x) => (x ? { key: x.key, ...(x.tone ? { tone: x.tone, toneStrength: x.toneStrength } : {}) } : null);
+  pa.slots[a.slot] = carry(sb);
+  pb.slots[b.slot] = carry(sa);
   normalize(ed);
 }
 
@@ -225,7 +231,8 @@ export function setText(project, edId, page, idx, value) {
 export function setPageProps(project, edId, page, patch) {
   const ed = getEdition(project, edId);
   const p = ed.pages[pageOwner(ed, page).owner];
-  for (const k of ['bg', 'margin', 'gap', 'bgPhoto', 'hideNumber']) {
+  if (!p) throw Object.assign(new Error(`no page ${page}`), { status: 400 });
+  for (const k of ['bg', 'margin', 'gap', 'bgPhoto', 'hideNumber', 'bgGraphic']) {
     if (!(k in patch)) continue;
     if (patch[k] === null || patch[k] === '') delete p[k]; else p[k] = patch[k];
   }
@@ -254,9 +261,15 @@ export function autoFill(project, edId, items, opts = {}) {
   const gapH = (opts.breakHours ?? 36) * 3600e3;
   const pageAspect = ed.w / ed.h;
   const out = [];
+  if (opts.style === 'monograph') return monographFill(ed, items, opts, pageAspect);
   let cur = [], last = null;
   const flush = () => { if (cur.length) out.push(newPage('auto', cur.map((k) => ({ key: k })))); cur = []; };
+  let chap = null;
   for (const it of items) {
+    if (opts.chapters) {
+      const key = chapterKey(it, opts.chapters);
+      if (key && key !== chap) { flush(); chap = key; out.push(chapterPage(it, opts.chapters, opts.lang || 'de')); }
+    }
     const t = it.time ? Date.parse(it.time) : null;
     if (opts.breakOnGaps !== false && last && t && t - last > gapH) flush();
     if (t) last = t;
@@ -278,14 +291,152 @@ export function autoFill(project, edId, items, opts = {}) {
   return { pages: out.length };
 }
 
+// Applies a book template: font, text styles, page colour and graphic, cover design, page numbers.
+// The pages themselves stay; relayout (server side) refills them with the template's sequence.
+export function applyTemplate(project, edId, templateId) {
+  const ed = getEdition(project, edId);
+  const tp = findTemplate(templateId);
+  if (!tp) throw new Error(`unknown template: ${templateId}`);
+  ed.font = tp.font;
+  const keep = Object.fromEntries(Object.entries(ed.textStyles || {}).filter(([k]) => !ROLES.includes(k)));
+  ed.textStyles = { ...keep, ...structuredClone(tp.styles) };
+  ed.bg = tp.page.bg;
+  if (tp.page.graphic) ed.bgGraphic = { ...tp.page.graphic }; else delete ed.bgGraphic;
+  for (const p of ed.pages) { delete p.bg; }
+  const c = ed.coverDesign;
+  setCoverLayout(ed, tp.cover.layout);
+  c.bg = tp.cover.bg;
+  if (tp.cover.graphic) c.bgGraphic = { ...tp.cover.graphic }; else delete c.bgGraphic;
+  ed.pageNumbers = tp.pageNumbers;
+  ed.template = tp.id;
+  normalize(ed);
+  return { template: tp.id, fill: tp.fill };
+}
+
+// Changing the cover layout keeps texts with their role (the spine text stays the spine text).
+// A page title becomes the cover title when the new layout has one and the old one did not.
+export function setCoverLayout(ed, layout) {
+  const c = ed.coverDesign;
+  const before = coverFrames(ed).frames.filter((f) => f.kind === 'text').map((f) => f.role);
+  const byRole = {};
+  before.forEach((r, i) => { if (c.texts?.[i]?.value) byRole[r] = c.texts[i]; });
+  c.layout = layout;
+  const after = coverFrames(ed).frames.filter((f) => f.kind === 'text').map((f) => f.role);
+  if (!byRole.cover && byRole.title) byRole.cover = byRole.title;
+  if (!byRole.title && byRole.cover) byRole.title = byRole.cover;
+  c.texts = after.map((r) => byRole[r] || { value: '' });
+}
+
+// Chapter key of a photo: month or day, from its capture time.
+function chapterKey(it, mode) {
+  if (!it.time) return null;
+  const d = new Date(it.time);
+  if (Number.isNaN(d.getTime())) return null;
+  return mode === 'day' ? d.toISOString().slice(0, 10) : d.toISOString().slice(0, 7);
+}
+function chapterPage(it, mode, lang) {
+  const d = new Date(it.time);
+  const big = mode === 'day' ? d.toLocaleDateString(lang, { day: 'numeric', month: 'long' }) : d.toLocaleDateString(lang, { month: 'long' });
+  const small = mode === 'day' ? d.toLocaleDateString(lang, { weekday: 'long', year: 'numeric' }) : String(d.getFullYear());
+  const p = newPage('kapitel', []);
+  p.texts = [{ value: big }, { value: small }];
+  return p;
+}
+
+// Photo-book sequence: one photo per page, the best ones full bleed, every few pages a small
+// "breathing" photo. With rightHand, photos only sit on right pages and the left page stays white.
+function monographFill(ed, items, opts, pageAspect) {
+  const hi = opts.highlightRating ?? 5;
+  const out = [];
+  const startIndex = opts.replace ? 0 : opts.at != null ? opts.at : ed.pages.length;
+  let n = 0, chap = null;
+  for (const it of items) {
+    if (opts.chapters) {
+      const key = chapterKey(it, opts.chapters);
+      if (key && key !== chap) {
+        chap = key;
+        // Chapter openers sit on a right page.
+        if ((startIndex + out.length) % 2 === 1) out.push(newPage('leer', []));
+        out.push(chapterPage(it, opts.chapters, opts.lang || 'de'));
+      }
+    }
+    if (opts.rightHand && (startIndex + out.length) % 2 === 1) out.push(newPage('leer', []));
+    const a = it.w && it.h ? it.w / it.h : 1.5;
+    const close = Math.abs(Math.log(a / pageAspect)) < 0.3;
+    let layout = 'tafel';
+    if (hi && (it.rating || 0) >= hi) layout = close ? 'voll' : 'tafel';
+    else if (++n % 5 === 0) layout = 'atem';
+    out.push(newPage(layout, [{ key: it.key }]));
+  }
+  if (opts.replace) ed.pages = out;
+  else if (opts.at != null) ed.pages.splice(opts.at, 0, ...out);
+  else ed.pages.push(...out);
+  normalize(ed);
+  return { pages: out.length };
+}
+
 // ---------- Cover ----------
 export function setCover(project, edId, patch) {
   const ed = getEdition(project, edId);
   const c = ed.coverDesign;
-  if (patch.layout) c.layout = patch.layout;
+  if (patch.layout) setCoverLayout(ed, patch.layout);
   if (patch.slot != null) { c.slots[patch.slot] = patch.key ? { key: patch.key, ...(patch.extra || {}) } : null; }
   if (patch.texts) c.texts = patch.texts;
   if (patch.bg) c.bg = patch.bg;
+  if ('bgGraphic' in patch) { if (patch.bgGraphic) c.bgGraphic = patch.bgGraphic; else delete c.bgGraphic; }
+  if ('barcode' in patch) { if (patch.barcode) c.barcode = { ...(c.barcode || {}), ...patch.barcode }; else delete c.barcode; }
+}
+
+// ---------- Text styles ----------
+// styleId is a role (title, body, caption, spine, back) or a name of your own. patch null deletes an own style
+// or resets a role to its defaults.
+export function setTextStyle(project, edId, styleId, patch) {
+  const ed = getEdition(project, edId);
+  ed.textStyles ||= {};
+  if (patch === null) { delete ed.textStyles[styleId]; return { styles: ed.textStyles }; }
+  const cur = { ...(ed.textStyles[styleId] || {}) };
+  for (const k of [...STYLE_KEYS, 'name']) {
+    if (!(k in patch)) continue;
+    if (patch[k] === null || patch[k] === '') delete cur[k]; else cur[k] = patch[k];
+  }
+  ed.textStyles[styleId] = cur;
+  return { styles: ed.textStyles };
+}
+
+// Applies a style preset (font plus role styles) to an edition. Keeps the user's own named styles.
+export function applyStylePreset(project, edId, presetId) {
+  const ed = getEdition(project, edId);
+  const pr = STYLE_PRESETS.find((x) => x.id === presetId);
+  if (!pr) throw new Error(`unknown preset: ${presetId}`);
+  ed.font = pr.family;
+  const keep = Object.fromEntries(Object.entries(ed.textStyles || {}).filter(([k]) => !ROLES.includes(k)));
+  ed.textStyles = { ...keep };
+  for (const r of ROLES) if (pr[r]) ed.textStyles[r] = { ...pr[r] };
+  return { font: ed.font, styles: ed.textStyles };
+}
+
+// Style and direct formatting of one text. target: { page } or { cover: true }. patch may hold
+// value, style (id or null) and any style key (null removes the override).
+export function setTextProps(project, edId, target, index, patch) {
+  const ed = getEdition(project, edId);
+  const arr = target.cover ? (ed.coverDesign.texts ||= []) : ed.pages[pageOwner(ed, target.page).owner].texts;
+  const cur = { ...(arr[index] || { value: '' }) };
+  for (const k of ['value', 'style', ...STYLE_KEYS]) {
+    if (!(k in patch)) continue;
+    if (patch[k] === null || patch[k] === '') delete cur[k]; else cur[k] = patch[k];
+  }
+  arr[index] = cur;
+  return cur;
+}
+
+// Tone for one photo (bw, warm, sepia, selenium, cool; null = original colours).
+export function setTone(project, edId, target, slot, tone, strength) {
+  const ed = getEdition(project, edId);
+  const slots = target.cover ? ed.coverDesign.slots : ed.pages[pageOwner(ed, target.page).owner].slots;
+  const s = slots[slot];
+  if (!s) throw new Error('empty frame');
+  if (!tone) { delete s.tone; delete s.toneStrength; } else { s.tone = tone; if (strength != null) s.toneStrength = Number(strength); }
+  return s;
 }
 
 // ---------- Usage & checks ----------
@@ -320,6 +471,8 @@ export function preflight(project, edId, poolMap) {
   if (ed.pageStep && n % ed.pageStep) out.push({ level: 'error', code: 'page-step', params: { n, step: ed.pageStep } });
   if (ed.pageMin && n < ed.pageMin) out.push({ level: 'error', code: 'page-min', params: { n, min: ed.pageMin } });
   if (ed.pageMax && n > ed.pageMax) out.push({ level: 'error', code: 'page-max', params: { n, max: ed.pageMax } });
+  const lim = ed.customLimits;
+  if (lim && (ed.w < lim.w[0] || ed.w > lim.w[1] || ed.h < lim.h[0] || ed.h > lim.h[1])) out.push({ level: 'error', code: 'custom-size', params: { w: ed.w, h: ed.h, wmin: lim.w[0], wmax: lim.w[1], hmin: lim.h[0], hmax: lim.h[1] } });
   const sp = spineOf(ed);
   if (!sp.exact) out.push({ level: 'warn', code: 'no-spine', params: { est: sp.mm, url: sp.url || ed.spineRule?.url || '' } });
   const sf = coverFrames(ed).frames.find((f) => f.kind === 'text' && f.role === 'spine');

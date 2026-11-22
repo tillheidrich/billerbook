@@ -112,9 +112,9 @@ function edition(provider, format, pages, extra = {}) {
 
 // Cover template: the printer's template PDF sets the cover size and the spine follows from it
 {
-  const { pr, ed } = edition('kdp', 'kdp-hc-85x11', 150);
+  const { pr, ed } = edition('kdp', 'kdp-hc-825x11', 150);
   const doc = await PDFDocument.create();
-  const Wmm = 2 * 15 + 2 * 8.5 * IN + 21.3, Hmm = 11 * IN + 30;
+  const Wmm = 2 * 15 + 2 * 8.25 * IN + 21.3, Hmm = 11 * IN + 30;
   doc.addPage([Wmm / 25.4 * 72, Hmm / 25.4 * 72]);
   const bytes = await doc.save();
   const t = await readCoverTemplate(Buffer.from(bytes));

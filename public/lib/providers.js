@@ -74,6 +74,8 @@ export const PROVIDERS = [
   {
     id: 'kdp',
     name: 'Amazon KDP',
+    // KDP prints its own barcode on a 2 × 1.2 in area of the back cover unless the cover has one.
+    barcode: 'placeholder',
     region: 'Worldwide',
     url: 'https://kdp.amazon.com',
     units: 'in',
@@ -82,11 +84,13 @@ export const PROVIDERS = [
       'https://kdp.amazon.com/help/topic/G201953020',
       'https://kdp.amazon.com/help/topic/G201834560',
       'https://kdp.amazon.com/help/topic/GDTKFJPNQCBTMRV6',
+      'https://kdp.amazon.com/en_US/help/topic/GVBQ3CMEQW3W2VL6',
     ],
     notes: lbl('Paperback: KDP publishes the spine formula, so the cover size is exact. Spine text only from 79 pages. Hardcover: KDP publishes the 15 mm wrap and the 10 mm hinge, but the full cover size only through its cover calculator. Import the template KDP generates.',
       'Paperback: KDP veröffentlicht die Rückenformel, der Umschlag stimmt also genau. Rückentext erst ab 79 Seiten. Hardcover: KDP nennt 15 mm Einschlag und 10 mm Falz, die vollständigen Umschlagmaße aber nur im eigenen Rechner. Importiere die Vorlage, die KDP erzeugt.'),
     bindings: {
       softcover: { status: 'verified', bleed: r1(0.125 * IN), safety: r1(0.375 * IN), glue: r1(0.375 * IN), interior: 'single', blankEnds: false, pages: { min: 24, max: null, step: 2 }, colour: 'srgb', spineTextMin: 79,
+        customLimits: { w: [r1(4 * IN), r1(8.5 * IN)], h: [r1(6 * IN), r1(11.69 * IN)] },
         cover: { mode: 'spread', wrap: r1(0.125 * IN), overW: 0, overH: 0, joint: 0, hinge: 0 },
         papers: [
           { id: 'white', label: lbl('White paper (B&W, standard colour)', 'Weißes Papier (S/W, Standardfarbe)'), spine: { type: 'formula', perPage: 0.002252 * IN, base: 0 } },
@@ -101,13 +105,13 @@ export const PROVIDERS = [
         ] },
     },
     formats: [
-      { id: 'kdp-sc-85x85', binding: 'softcover', ...inch(8.5, 8.5), label: lbl('Paperback 8.5 × 8.5 in') },
-      { id: 'kdp-sc-85x11', binding: 'softcover', ...inch(8.5, 11), label: lbl('Paperback 8.5 × 11 in') },
-      { id: 'kdp-sc-825x11', binding: 'softcover', ...inch(8.25, 11), label: lbl('Paperback 8.25 × 11 in') },
+      // Official KDP tables (kdp.amazon.com/help/topic/GVBQ3CMEQW3W2VL6, 22.11.2026): 15 paperback sizes + A4, 5 hardcover sizes.
+      ...[[5, 8], [5.06, 7.81], [5.25, 8], [5.5, 8.5], [6, 9], [6.14, 9.21], [6.69, 9.61], [7, 10], [7.44, 9.69], [7.5, 9.25], [8, 10], [8.25, 6], [8.25, 8.25], [8.5, 8.5], [8.5, 11]]
+        .map(([w, h]) => ({ id: `kdp-sc-${String(w).replace('.', '')}x${String(h).replace('.', '')}`, binding: 'softcover', ...inch(w, h), label: lbl(`Paperback ${w} × ${h} in`) })),
       { id: 'kdp-sc-a4', binding: 'softcover', w: 210, h: 297, label: lbl('Paperback A4 (8.27 × 11.69 in)') },
-      { id: 'kdp-sc-8x10', binding: 'softcover', ...inch(8, 10), label: lbl('Paperback 8 × 10 in') },
-      { id: 'kdp-hc-85x11', binding: 'hardcover', ...inch(8.5, 11), label: lbl('Hardcover 8.5 × 11 in') },
-      { id: 'kdp-hc-825x11', binding: 'hardcover', ...inch(8.25, 11), label: lbl('Hardcover 8.25 × 11 in') },
+      { id: 'kdp-sc-825x11', binding: 'softcover', ...inch(8.25, 11), label: lbl('Paperback 8.25 × 11 in') },
+      ...[[5.5, 8.5], [6, 9], [6.14, 9.21], [7, 10], [8.25, 11]]
+        .map(([w, h]) => ({ id: `kdp-hc-${String(w).replace('.', '')}x${String(h).replace('.', '')}`, binding: 'hardcover', ...inch(w, h), label: lbl(`Hardcover ${w} × ${h} in`) })),
     ],
   },
   {
@@ -154,6 +158,7 @@ export const PROVIDERS = [
       'https://www.blurb.com/book-dimensions',
       'https://support.blurb.com/hc/en-us/articles/207792946-PDF-to-Book-specifications-and-checklist',
       'https://www.blurb.co.uk/make/pdf_to_book/booksize_calculator',
+      'https://www.magcloud.com/formats/details/selected',
     ],
     notes: lbl('Single pages, even page count, at least 1/8 in bleed and 1/4 in safe area. Blurb asks for the exact sizes from its specification calculator (they depend on paper and page count). Import Blurb’s cover template so the ImageWrap size is exact.',
       'Einzelseiten, gerade Seitenzahl, mindestens 1/8 Zoll Beschnitt und 1/4 Zoll Sicherheitsabstand. Die genauen Maße nennt Blurb im Spezifikationsrechner (abhängig von Papier und Seitenzahl). Importiere Blurbs Umschlagvorlage, dann stimmt das ImageWrap-Maß genau.'),
@@ -168,6 +173,10 @@ export const PROVIDERS = [
       softcover: { status: 'partial', bleed: 3.175, safety: 6.35, glue: 6.35, interior: 'single', blankEnds: false, pages: { min: 20, max: 440, step: 2 }, colour: 'srgb',
         cover: { mode: 'spread', wrap: 3.175, overW: 0, overH: 0, joint: 0, hinge: 0 },
         spine: { type: 'printer', perPage: 0.07, url: 'https://www.blurb.com/make/pdf_to_book/booksize_calculator' } },
+      // Blurb magazines (formerly MagCloud): trim 8.25 × 10.75 in, PDF 8.5 × 11 in. Blurb's bleed is
+      // 0.125 in top/bottom and 0.25 in outside, none at the fold; Billerbook uses 0.125 in all round.
+      saddle: { status: 'partial', bleed: 3.175, safety: 6.35, glue: 0, interior: 'single', blankEnds: false, pages: { min: 8, max: 100, step: 4 }, colour: 'srgb',
+        cover: { mode: 'none', wrap: 0, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'formula', perPage: 0, base: 0 } },
     },
     formats: [
       { id: 'blurb-7x7', binding: 'hardcover', ...inch(6.75, 6.63), label: lbl('Small Square 7 × 7 in, hardcover (trimmed 6.75 × 6.63)') },
@@ -178,11 +187,17 @@ export const PROVIDERS = [
       { id: 'blurb-sc-7x7', binding: 'softcover', ...inch(6.75, 6.63), label: lbl('Small Square 7 × 7 in, softcover') },
       { id: 'blurb-sc-8x10', binding: 'softcover', ...inch(8, 10), label: lbl('Standard Portrait 8 × 10 in, softcover') },
       { id: 'blurb-sc-10x8', binding: 'softcover', ...inch(9.5, 8), label: lbl('Standard Landscape 10 × 8 in, softcover') },
+      { id: 'blurb-trade-5x8', binding: 'softcover', ...inch(5, 8), label: lbl('Trade book 5 × 8 in, softcover') },
+      { id: 'blurb-trade-6x9', binding: 'softcover', ...inch(6, 9), label: lbl('Trade book 6 × 9 in, softcover') },
+      { id: 'blurb-trade-hc-6x9', binding: 'hardcover', ...inch(6, 9), label: lbl('Trade book 6 × 9 in, hardcover') },
+      { id: 'blurb-mag', binding: 'saddle', ...inch(8.25, 10.75), label: lbl('Magazine 8.25 × 10.75 in (PDF 8.5 × 11), saddle stitched', 'Magazin 8,25 × 10,75 Zoll (PDF 8,5 × 11), Rückendrahtheftung') },
     ],
   },
   {
     id: 'ingramspark',
     name: 'IngramSpark',
+    // Distribution through IngramSpark needs an EAN-13 barcode of the ISBN on the back cover.
+    barcode: 'required',
     region: 'Worldwide',
     url: 'https://www.ingramspark.com',
     units: 'in',
@@ -190,6 +205,7 @@ export const PROVIDERS = [
     sources: [
       'https://help.ingramspark.com/hc/en-us/articles/35304333693837-Case-Laminate-and-Digital-Cloth-Hard-Cover',
       'https://marketing.ingramcontent.com/mrkng/documents/publishers/Cover-Bleed-Dimensions.pdf',
+      'https://marketing.ingramcontent.com/mrkng/documents/publishers/trim-sizes.pdf',
     ],
     notes: lbl('IngramSpark publishes no per-page spine figure; the spine comes with the cover template from its title setup. Case laminate: 0.625 in wrap on every edge and 0.5 in hinge on each side of the spine.',
       'IngramSpark nennt keine Rückenstärke pro Seite; der Rücken kommt mit der Umschlagvorlage aus der Titelanlage. Case Laminate: 0,625 Zoll Einschlag an jeder Kante und 0,5 Zoll Falz auf jeder Seite des Rückens.'),
@@ -202,6 +218,12 @@ export const PROVIDERS = [
         spine: { type: 'printer', perPage: 0.0572, url: 'https://myaccount.ingramspark.com/Portal/Tools/CoverTemplateGenerator' } },
     },
     formats: [
+      // Trim matrix: marketing.ingramcontent.com/mrkng/documents/publishers/trim-sizes.pdf
+      ...[[5, 8], [5.06, 7.81], [5.25, 8], [5.5, 8.5], [6, 9], [6.14, 9.21], [6.69, 9.61], [7, 10], [7.44, 9.69], [7.5, 9.25], [8, 8], [8, 10], [8.25, 11], [8.5, 9], [8.5, 8.5], [11, 8.5]]
+        .map(([w, h]) => ({ id: `is-sc-${String(w).replace('.', '')}x${String(h).replace('.', '')}`, binding: 'softcover', ...inch(w, h), label: lbl(`Paperback ${w} × ${h} in`) })),
+      { id: 'is-sc-a5', binding: 'softcover', w: 148, h: 210, label: lbl('Paperback A5') },
+      ...[[5.5, 8.5], [6, 9], [6.14, 9.21], [7, 10], [8, 10], [8.25, 11]]
+        .map(([w, h]) => ({ id: `is-hc-${String(w).replace('.', '')}x${String(h).replace('.', '')}`, binding: 'hardcover', ...inch(w, h), label: lbl(`Case laminate ${w} × ${h} in`) })),
       { id: 'is-85x85', binding: 'hardcover', ...inch(8.5, 8.5), label: lbl('Case laminate 8.5 × 8.5 in') },
       { id: 'is-85x11', binding: 'hardcover', ...inch(8.5, 11), label: lbl('Case laminate 8.5 × 11 in') },
       { id: 'is-a4', binding: 'hardcover', w: 210, h: 297, label: lbl('Case laminate A4') },
@@ -224,6 +246,8 @@ export const PROVIDERS = [
         cover: { mode: 'spread', wrap: 20, overW: 0, overH: 0, joint: 5, hinge: 5 }, spine: { type: 'printer', perPage: 0.07, url: 'https://mixam.com/hardcoverbooks' } },
       softcover: { status: 'partial', bleed: 3, safety: 5, glue: 5, interior: 'single', blankEnds: false, pages: { min: null, max: null, step: 2 }, colour: 'cmyk',
         cover: { mode: 'spread', wrap: 3, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'printer', perPage: 0.07, url: 'https://mixam.com' } },
+      saddle: { status: 'partial', bleed: 3, safety: 5, glue: 0, interior: 'single', blankEnds: false, pages: { min: 8, max: 64, step: 4 }, colour: 'cmyk',
+        cover: { mode: 'none', wrap: 0, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'formula', perPage: 0, base: 0 } },
     },
     formats: [
       { id: 'mixam-hc-a4-p', binding: 'hardcover', w: 210, h: 297, label: lbl('Hardcover A4 portrait', 'Hardcover A4 hoch') },
@@ -234,6 +258,10 @@ export const PROVIDERS = [
       { id: 'mixam-hc-85x11', binding: 'hardcover', ...inch(8.5, 11), label: lbl('Hardcover 8.5 × 11 in') },
       { id: 'mixam-sc-a4-p', binding: 'softcover', w: 210, h: 297, label: lbl('Softcover A4 portrait', 'Softcover A4 hoch') },
       { id: 'mixam-sc-210', binding: 'softcover', w: 210, h: 210, label: lbl('Softcover 210 × 210 mm') },
+      { id: 'mixam-mag-a4', binding: 'saddle', w: 210, h: 297, label: lbl('Magazine A4, saddle stitched', 'Magazin A4, Rückendrahtheftung') },
+      { id: 'mixam-mag-a5', binding: 'saddle', w: 148, h: 210, label: lbl('Magazine A5, saddle stitched', 'Magazin A5, Rückendrahtheftung') },
+      { id: 'mixam-mag-letter', binding: 'saddle', ...inch(8.5, 11), label: lbl('Magazine US Letter, saddle stitched', 'Magazin US Letter, Rückendrahtheftung') },
+      { id: 'mixam-mag-210', binding: 'saddle', w: 210, h: 210, label: lbl('Magazine 210 × 210 mm, saddle stitched', 'Magazin 210 × 210 mm, Rückendrahtheftung') },
     ],
   },
   {
@@ -282,6 +310,103 @@ export const PROVIDERS = [
     ],
   },
   {
+    id: 'cewe',
+    name: 'CEWE (PDF to Book)',
+    region: 'DE · AT · CH · UK · NL · Europe',
+    url: 'https://www.cewe.co.uk/pdf2book.html',
+    units: 'mm',
+    checked: '2026-11-22',
+    sources: ['https://www.cewe.co.uk/pdf-to-book-user-guide.html', 'https://cdn.cewe.co.uk/downloads/user-guide.pdf', 'https://www.cewe.co.uk/photo-books.html'],
+    notes: lbl('CEWE prints a PDF interior and a PDF cover in sRGB. The exact page and cover sizes (with bleed) come from CEWE’s free Template Generator: create the template for your format, paper and page count and import its cover PDF here. Content starts at 26 pages.',
+      'CEWE druckt Innenteil und Umschlag als PDF in sRGB. Die genauen Seiten- und Umschlagmaße (mit Beschnitt) liefert CEWEs kostenloser Template Generator: Vorlage für Format, Papier und Seitenzahl erzeugen und die Umschlag-PDF hier importieren. Innenteil ab 26 Seiten.'),
+    bindings: {
+      hardcover: { status: 'partial', bleed: 3, safety: 10, glue: 10, interior: 'single', blankEnds: false, pages: { min: 26, max: 202, step: 2 }, colour: 'srgb',
+        cover: { mode: 'spread', wrap: 15, overW: 3, overH: 3, joint: 0, hinge: 8 }, spine: { type: 'printer', perPage: 0.2, url: 'https://www.cewe.co.uk/pdf2book.html' } },
+      softcover: { status: 'partial', bleed: 3, safety: 10, glue: 6, interior: 'single', blankEnds: false, pages: { min: 26, max: 202, step: 2 }, colour: 'srgb',
+        cover: { mode: 'spread', wrap: 3, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'printer', perPage: 0.15, url: 'https://www.cewe.co.uk/pdf2book.html' } },
+    },
+    formats: [
+      { id: 'cewe-15x15', binding: 'hardcover', w: 150, h: 150, label: lbl('Compact Square 15 × 15 cm', 'Kompakt quadratisch 15 × 15 cm') },
+      { id: 'cewe-19x15', binding: 'hardcover', w: 190, h: 150, label: lbl('Compact Panorama 19 × 15 cm', 'Kompakt Panorama 19 × 15 cm') },
+      { id: 'cewe-21x21', binding: 'hardcover', w: 210, h: 210, label: lbl('Square 21 × 21 cm', 'Quadratisch 21 × 21 cm') },
+      { id: 'cewe-21x28', binding: 'hardcover', w: 210, h: 280, label: lbl('Large Portrait 21 × 28 cm', 'Groß 21 × 28 cm') },
+      { id: 'cewe-28x21', binding: 'hardcover', w: 280, h: 210, label: lbl('Large Landscape 28 × 21 cm', 'Groß Panorama 28 × 21 cm') },
+      { id: 'cewe-30x30', binding: 'hardcover', w: 300, h: 300, label: lbl('XL Square 30 × 30 cm', 'XL 30 × 30 cm') },
+      { id: 'cewe-28x36', binding: 'hardcover', w: 280, h: 360, label: lbl('XXL Portrait 28 × 36 cm', 'XXL 28 × 36 cm') },
+      { id: 'cewe-38x29', binding: 'hardcover', w: 380, h: 290, label: lbl('XXL Landscape 38 × 29 cm', 'XXL Panorama 38 × 29 cm') },
+      { id: 'cewe-sc-21x28', binding: 'softcover', w: 210, h: 280, label: lbl('Large Portrait 21 × 28 cm, softcover', 'Groß 21 × 28 cm, Softcover') },
+      { id: 'cewe-sc-21x21', binding: 'softcover', w: 210, h: 210, label: lbl('Square 21 × 21 cm, softcover', 'Quadratisch 21 × 21 cm, Softcover') },
+    ],
+  },
+  {
+    id: 'whitewall',
+    name: 'WhiteWall (Coffee Table Book)',
+    region: 'EU · UK · US',
+    url: 'https://www.whitewall.com/eu/coffee-table-book/pdf-upload',
+    units: 'mm',
+    checked: '2026-11-22',
+    sources: ['https://whitewall.com/eu/coffee-table-book', 'https://www.whitewall.com/eu/coffee-table-book/pdf-upload', 'https://service.whitewall.com/hc/en-us/articles/4411222658321-05-PDF-file-requirements-and-export-instructions'],
+    notes: lbl('Single pages, sRGB, 28 to 200 pages in steps of four, cover and content as separate PDFs. WhiteWall shows the exact sizes with bleed after you choose format, paper, cover and page count, and generates InDesign templates: import the cover template. Keep 2 mm from the spine centre; the cover fold reaches 10–12 mm onto front and back.',
+      'Einzelseiten, sRGB, 28 bis 200 Seiten in Viererschritten, Umschlag und Inhalt als getrennte PDFs. Die genauen Maße mit Beschnitt zeigt WhiteWall nach Wahl von Format, Papier, Umschlag und Seitenzahl und erzeugt InDesign-Vorlagen: Umschlagvorlage importieren. 2 mm Abstand zur Rückenmitte; der Umschlagfalz reicht 10–12 mm auf Vorder- und Rückseite.'),
+    bindings: {
+      hardcover: { status: 'partial', bleed: 3, safety: 10, glue: 10, interior: 'single', blankEnds: false, pages: { min: 28, max: 200, step: 4 }, colour: 'srgb',
+        cover: { mode: 'spread', wrap: 15, overW: 3, overH: 3, joint: 0, hinge: 12 }, spine: { type: 'printer', perPage: 0.2, url: 'https://www.whitewall.com/eu/coffee-table-book/pdf-upload' } },
+    },
+    formats: [
+      { id: 'ww-story', binding: 'hardcover', w: 205, h: 205, label: lbl('Story Square 20.5 × 20.5 cm', 'Story Square 20,5 × 20,5 cm') },
+      { id: 'ww-exh-p', binding: 'hardcover', w: 205, h: 270, label: lbl('Exhibition A4 portrait 20.5 × 27 cm', 'Exhibition A4 hoch 20,5 × 27 cm') },
+      { id: 'ww-exh-l', binding: 'hardcover', w: 270, h: 205, label: lbl('Exhibition A4 landscape 27 × 20.5 cm', 'Exhibition A4 quer 27 × 20,5 cm') },
+      { id: 'ww-gallery', binding: 'hardcover', w: 290, h: 290, label: lbl('Gallery Square 29 × 29 cm') },
+      { id: 'ww-port-p', binding: 'hardcover', w: 270, h: 356, label: lbl('Portfolio A3 portrait 27 × 35.6 cm', 'Portfolio A3 hoch 27 × 35,6 cm') },
+      { id: 'ww-port-l', binding: 'hardcover', w: 382, h: 290, label: lbl('Portfolio A3 landscape 38.2 × 29 cm', 'Portfolio A3 quer 38,2 × 29 cm') },
+    ],
+  },
+  {
+    id: 'standard',
+    name: 'Standard formats (any print shop)',
+    region: 'Any',
+    url: '',
+    units: 'mm',
+    checked: '2026-11-22',
+    sources: ['https://kdp.amazon.com/en_US/help/topic/GVBQ3CMEQW3W2VL6', 'https://marketing.ingramcontent.com/mrkng/documents/publishers/trim-sizes.pdf'],
+    notes: lbl('Common photo book, book and magazine sizes with typical starting values (3 mm bleed, CMYK). Check bleed, spine and page rules against your print shop’s data sheet, or give the sheet to your assistant: read_print_spec and apply_print_spec set everything from it.',
+      'Gängige Fotobuch-, Buch- und Magazinformate mit typischen Startwerten (3 mm Beschnitt, CMYK). Beschnitt, Rücken und Seitenregeln mit dem Datenblatt der Druckerei abgleichen, oder das Datenblatt dem Assistenten geben: read_print_spec und apply_print_spec übernehmen alles daraus.'),
+    bindings: {
+      hardcover: { status: 'manual', bleed: 3, safety: 5, glue: 7, interior: 'single', blankEnds: false, pages: { min: null, max: null, step: 2 }, colour: 'cmyk',
+        cover: { mode: 'spread', wrap: 15, overW: 3, overH: 3, joint: 0, hinge: 7 }, spine: { type: 'printer', perPage: 0.07 } },
+      softcover: { status: 'manual', bleed: 3, safety: 5, glue: 5, interior: 'single', blankEnds: false, pages: { min: null, max: null, step: 2 }, colour: 'cmyk',
+        cover: { mode: 'spread', wrap: 3, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'printer', perPage: 0.08 } },
+      layflat: { status: 'manual', bleed: 3, safety: 8, glue: 0, interior: 'spreads', blankEnds: true, pages: { min: null, max: null, step: 2 }, colour: 'srgb',
+        cover: { mode: 'spread', wrap: 15, overW: 3, overH: 3, joint: 0, hinge: 8 }, spine: { type: 'printer', perPage: 0.4 } },
+      saddle: { status: 'manual', bleed: 3, safety: 5, glue: 0, interior: 'single', blankEnds: false, pages: { min: 8, max: 64, step: 4 }, colour: 'cmyk',
+        cover: { mode: 'none', wrap: 0, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'formula', perPage: 0, base: 0 } },
+    },
+    formats: [
+      // Photo books
+      ...[[150, 150], [200, 200], [210, 210], [300, 300], [210, 280], [280, 210], [210, 297], [297, 210], [240, 300], [300, 240], [280, 360], [380, 290], [400, 300]]
+        .map(([w, h]) => ({ id: `std-photo-${w}x${h}`, binding: 'hardcover', w, h, label: lbl(`Photo book ${w / 10} × ${h / 10} cm`, `Fotobuch ${String(w / 10).replace('.', ',')} × ${String(h / 10).replace('.', ',')} cm`) })),
+      ...[[300, 300], [300, 210], [210, 210], [400, 300]]
+        .map(([w, h]) => ({ id: `std-lf-${w}x${h}`, binding: 'layflat', w, h, label: lbl(`Layflat ${w / 10} × ${h / 10} cm`) })),
+      // Books: German trade sizes and ISO
+      ...[[120, 190, '12 × 19 cm'], [125, 190, '12.5 × 19 cm'], [135, 215, '13.5 × 21.5 cm'], [148, 210, 'A5'], [155, 230, '15.5 × 23 cm'], [170, 220, '17 × 22 cm'], [170, 240, '17 × 24 cm'], [176, 250, 'B5'], [210, 280, '21 × 28 cm'], [210, 297, 'A4']]
+        .flatMap(([w, h, n]) => ['softcover', 'hardcover'].map((b) => ({ id: `std-book-${b[0]}-${w}x${h}`, binding: b, w, h, label: lbl(`Book ${n}, ${b}`, `Buch ${n.replace('.', ',')}, ${b === 'softcover' ? 'Softcover' : 'Hardcover'}`) }))),
+      // Books: US trade sizes
+      ...[[5, 8], [5.25, 8], [5.5, 8.5], [6, 9], [7, 10], [8, 10], [8.5, 11]]
+        .flatMap(([w, h]) => ['softcover', 'hardcover'].map((b) => ({ id: `std-us-${b[0]}-${String(w).replace('.', '')}x${h}`, binding: b, ...inch(w, h), label: lbl(`Book ${w} × ${h} in, ${b}`, `Buch ${String(w).replace('.', ',')} × ${h} Zoll, ${b === 'softcover' ? 'Softcover' : 'Hardcover'}`) }))),
+      // Magazines
+      { id: 'std-mag-a4', binding: 'saddle', w: 210, h: 297, label: lbl('Magazine A4', 'Magazin A4') },
+      { id: 'std-mag-a5', binding: 'saddle', w: 148, h: 210, label: lbl('Magazine A5', 'Magazin A5') },
+      { id: 'std-mag-230x300', binding: 'saddle', w: 230, h: 300, label: lbl('Magazine 23 × 30 cm', 'Magazin 23 × 30 cm') },
+      { id: 'std-mag-210x280', binding: 'saddle', w: 210, h: 280, label: lbl('Magazine 21 × 28 cm', 'Magazin 21 × 28 cm') },
+      { id: 'std-mag-210', binding: 'saddle', w: 210, h: 210, label: lbl('Magazine 21 × 21 cm', 'Magazin 21 × 21 cm') },
+      { id: 'std-mag-letter', binding: 'saddle', ...inch(8.5, 11), label: lbl('Magazine US Letter', 'Magazin US Letter') },
+      { id: 'std-mag-digest', binding: 'saddle', ...inch(5.5, 8.5), label: lbl('Digest 5.5 × 8.5 in', 'Digest 5,5 × 8,5 Zoll') },
+      { id: 'std-zine-a6', binding: 'saddle', w: 105, h: 148, label: lbl('Zine A6') },
+      { id: 'std-mag-pb-a4', binding: 'softcover', w: 210, h: 297, label: lbl('Magazine A4, perfect bound', 'Magazin A4, Klebebindung') },
+      { id: 'std-mag-pb-230x300', binding: 'softcover', w: 230, h: 300, label: lbl('Magazine 23 × 30 cm, perfect bound', 'Magazin 23 × 30 cm, Klebebindung') },
+    ],
+  },
+  {
     id: 'custom',
     name: 'Custom / Eigene Druckerei',
     region: 'Any',
@@ -297,20 +422,38 @@ export const PROVIDERS = [
         cover: { mode: 'spread', wrap: 3, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'printer', perPage: 0.09 } },
       layflat: { status: 'manual', bleed: 3, safety: 5, glue: 0, interior: 'spreads', blankEnds: false, pages: { min: null, max: null, step: 2 }, colour: 'cmyk',
         cover: { mode: 'spread', wrap: 15, overW: 3, overH: 3, joint: 0, hinge: 7 }, spine: { type: 'printer', perPage: 0.25 } },
+      saddle: { status: 'manual', bleed: 3, safety: 5, glue: 0, interior: 'single', blankEnds: false, pages: { min: 8, max: 64, step: 4 }, colour: 'cmyk',
+        cover: { mode: 'none', wrap: 0, overW: 0, overH: 0, joint: 0, hinge: 0 }, spine: { type: 'formula', perPage: 0, base: 0 } },
     },
     formats: [
       { id: 'custom', binding: 'hardcover', w: 300, h: 240, custom: true, label: lbl('Custom size', 'Freies Format') },
       { id: 'custom-sc', binding: 'softcover', w: 210, h: 297, custom: true, label: lbl('Custom size, softcover', 'Freies Format, Softcover') },
       { id: 'custom-lf', binding: 'layflat', w: 300, h: 300, custom: true, label: lbl('Custom size, layflat', 'Freies Format, Layflat') },
+      { id: 'custom-mag', binding: 'saddle', w: 210, h: 297, custom: true, label: lbl('Custom size, magazine (saddle stitched)', 'Freies Format, Magazin (Rückendrahtheftung)') },
     ],
   },
 ];
+
+// Every print shop and binding gets a special size ("Sonderformat") with free width and height,
+// starting from that binding's first format. customLimits (mm) are checked in preflight.
+const binLabel = { hardcover: ['hardcover', 'Hardcover'], softcover: ['softcover', 'Softcover'], layflat: ['layflat', 'Layflat'], saddle: ['saddle stitched', 'Rückendrahtheftung'] };
+export function withSpecialSizes(p) {
+  const formats = [...p.formats];
+  for (const b of Object.keys(p.bindings || {})) {
+    if (formats.some((f) => f.binding === b && f.custom)) continue;
+    const first = formats.find((f) => f.binding === b) || formats[0] || { w: 210, h: 297 };
+    const [en, de] = binLabel[b] || [b, b];
+    formats.push({ id: `${p.id}-special-${b}`, binding: b, w: first.w, h: first.h, custom: true, label: lbl(`Special size, ${en}`, `Sonderformat, ${de}`) });
+  }
+  return { ...p, formats };
+}
+for (let i = 0; i < PROVIDERS.length; i++) PROVIDERS[i] = withSpecialSizes(PROVIDERS[i]);
 
 // User profiles (imported JSON) are registered at runtime and win over built-ins with the same id.
 const extra = new Map();
 export function registerProfiles(list = []) {
   extra.clear();
-  for (const p of list) if (p && p.id && p.bindings && p.formats) extra.set(p.id, { ...p, user: true });
+  for (const p of list) if (p && p.id && p.bindings && p.formats) extra.set(p.id, withSpecialSizes({ ...p, user: true }));
 }
 export function allProviders() {
   const ids = new Set(extra.keys());
@@ -366,6 +509,7 @@ export function editionSpecFrom(providerId, formatId, paperId) {
     colourWanted: b.colour || 'cmyk', spineTextMin: b.spineTextMin || 0,
     cover: { mode: 'spread', joint: 0, ...b.cover }, spineRule: spineRuleOf(p, f.binding, paper),
     profileStatus: b.status || 'manual',
+    customLimits: f.custom ? (b.customLimits || null) : null,
   };
 }
 

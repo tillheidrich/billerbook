@@ -1,6 +1,6 @@
 // Billerbook for macOS: Electron shell around the local server.
 // Updates come from GitHub Releases (electron-updater), signed and notarized.
-const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain, nativeTheme } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
@@ -36,21 +36,38 @@ async function startServer() {
 function createWindow() {
   win = new BrowserWindow({
     width: 1500, height: 960, minWidth: 1100, minHeight: 700,
-    title: 'Billerbook', backgroundColor: '#1c1c1c',
+    title: 'Billerbook', backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1c' : '#f6f6f6',
     titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 16 },
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: false },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: true },
   });
   win.loadURL(base);
-  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
-  win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(base)) { e.preventDefault(); shell.openExternal(url); } });
+  // Spelling: macOS checks with the system dictionaries; the context menu offers suggestions.
+  win.webContents.on('context-menu', (_e, params) => {
+    if (!params.isEditable) return;
+    const items = params.dictionarySuggestions.slice(0, 6).map((w) => ({ label: w, click: () => win.webContents.replaceMisspelling(w) }));
+    if (params.misspelledWord) {
+      if (!items.length) items.push({ label: '—', enabled: false });
+      items.push({ type: 'separator' }, { label: 'Zum Wörterbuch hinzufügen / Add to dictionary', click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord) }, { type: 'separator' });
+    }
+    items.push({ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { type: 'separator' }, { role: 'selectAll' });
+    Menu.buildFromTemplate(items).popup({ window: win });
+  });
+  // Only the editor's own origin loads in this window; other links open in the browser, and only
+  // web or mail links (never file:, smb: or app URLs).
+  win.webContents.setWindowOpenHandler(({ url }) => { openOutside(url); return { action: 'deny' }; });
+  win.webContents.on('will-navigate', (e, url) => { if (!sameOrigin(url)) { e.preventDefault(); openOutside(url); } });
   win.on('closed', () => { win = null; });
 }
 
-ipcMain.handle('pick', async (_e, { kind, prompt }) => {
+const sameOrigin = (url) => { try { return new URL(url).origin === new URL(base).origin; } catch { return false; } };
+const openOutside = (url) => { try { if (['https:', 'http:', 'mailto:'].includes(new URL(url).protocol)) shell.openExternal(url); } catch {} };
+const fromEditor = (e) => sameOrigin(e.senderFrame?.url || '');
+ipcMain.handle('pick', async (e, { kind, prompt } = {}) => {
+  if (!fromEditor(e)) return null;
   const r = await dialog.showOpenDialog(win, { message: prompt || '', properties: kind === 'file' ? ['openFile'] : ['openDirectory', 'createDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
-ipcMain.handle('reveal', (_e, p) => shell.showItemInFolder(p));
+ipcMain.handle('reveal', (e, p) => { if (fromEditor(e) && typeof p === 'string' && path.isAbsolute(p)) shell.showItemInFolder(p); });
 
 // ---------- updates ----------
 let updater = null;
@@ -91,7 +108,7 @@ function buildMenu() {
       { type: 'separator' }, isMac ? { role: 'close' } : { role: 'quit' },
     ] },
     { role: 'editMenu' },
-    { label: 'View', submenu: [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
+    { label: 'View', submenu: [{ role: 'reload' }, ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' }]), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     { role: 'windowMenu' },
     { role: 'help', submenu: [
       { label: 'Billerbook Website', click: () => shell.openExternal('https://billerbook.heidrich-digital.de') },
