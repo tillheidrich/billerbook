@@ -476,14 +476,14 @@ def legal_pages(mail):
     m = f'<a href="mailto:{mail}">{mail}</a>' if mail else 'siehe <a href="https://tillheidrich.de/impressum/">Impressum auf tillheidrich.de</a>'
     return {
  "impressum": ("Impressum", f'''<p><strong>Angaben gemäß § 5 DDG</strong></p>
-<p>Till Heidrich – Content Creation<br>Rotdornweg 17<br>21255 Tostedt<br>Deutschland</p>
-<h2>Kontakt</h2><p>E-Mail: {m}</p>
+<p>Till Heidrich – Heidrich Digital<br>Rotdornweg 17<br>21255 Tostedt<br>Deutschland</p>
+<h2>Kontakt</h2><p>E-Mail: {m}<br>Web: <a href="https://heidrich-digital.de">heidrich-digital.de</a></p>
 <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2><p>Till Heidrich, Anschrift wie oben</p>
 <h2>Umsatzsteuer</h2><p>Kleinunternehmer gemäß § 19 UStG, daher keine Umsatzsteuer-Identifikationsnummer.</p>
 <h2>Software</h2><p>Billerbook ist freie Software unter der GNU Affero General Public License 3.0 und wird, soweit gesetzlich zulässig, ohne Gewährleistung bereitgestellt. Der Quellcode liegt auf <a href="{REPO}">GitHub</a>.</p>
 <h2>Haftung für Links</h2><p>Diese Seite verlinkt auf externe Seiten (GitHub). Für deren Inhalte sind die jeweiligen Anbieter verantwortlich.</p>'''),
  "datenschutz": ("Datenschutz", f'''<p>Diese Website setzt keine Cookies, nutzt keine Analyse- oder Tracking-Dienste und bindet keine Inhalte von Drittanbietern ein. Schriften und Bilder liegen auf demselben Server.</p>
-<h2>Verantwortlicher</h2><p>Till Heidrich – Content Creation, Rotdornweg 17, 21255 Tostedt, {m}</p>
+<h2>Verantwortlicher</h2><p>Till Heidrich – Heidrich Digital, Rotdornweg 17, 21255 Tostedt, {m}</p>
 <h2>Hosting und Server-Logfiles</h2><p>Die Seite liegt auf einem Server der Hetzner Online GmbH in Deutschland. Beim Aufruf verarbeitet der Webserver technisch notwendige Daten (IP-Adresse, Zeitpunkt, aufgerufene Datei, Browserkennung), um die Seite auszuliefern und gegen Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Die Logs werden nach kurzer Zeit gelöscht. Mit Hetzner besteht ein Vertrag zur Auftragsverarbeitung.</p>
 <h2>Downloads über GitHub</h2><p>Der Download-Knopf führt zu GitHub (GitHub, Inc., USA). Dort gelten die Datenschutzbestimmungen von GitHub. Erst mit dem Klick werden Daten an GitHub übertragen.</p>
 <h2>Die App</h2><p>Billerbook läuft lokal auf deinem Rechner. Fotos, Kataloge und Projekte werden nicht hochgeladen. Die Mac-App fragt bei GitHub nach neuen Versionen; dabei sieht GitHub deine IP-Adresse.</p>
