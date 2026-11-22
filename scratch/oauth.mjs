@@ -1,0 +1,37 @@
+// End-to-end: register, authorize with pairing code, token, MCP call through the "public" host.
+import crypto from 'node:crypto';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+process.env.BILLERBOOK_DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'oauth-'));
+const { start } = await import('../server.mjs');
+const srv = await start({ port: 0 }); const port = srv.address().port;
+const L = `http://127.0.0.1:${port}`;
+await fetch(`${L}/api/remote/url`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: 'https://bb-test.example.org' }) });
+const H = { host: 'bb-test.example.org' };
+const http = await import('node:http');
+const req = (method, p, { headers = {}, body } = {}) => new Promise((res, rej) => {
+  const r = http.request({ host: '127.0.0.1', port, method, path: p, headers: { ...H, ...headers } }, (x) => { let d = ''; x.on('data', (c) => d += c); x.on('end', () => res({ status: x.statusCode, headers: x.headers, body: d })); });
+  r.on('error', rej); if (body) r.write(body); r.end();
+});
+console.log('api via public host', (await req('GET', '/api/projects')).status, '(expect 404)');
+console.log('mcp no token', (await req('POST', '/mcp', { headers: { 'content-type': 'application/json' }, body: '{}' })).status, '(expect 401)');
+const meta = JSON.parse((await req('GET', '/.well-known/oauth-authorization-server')).body); console.log('issuer', meta.issuer);
+const reg = JSON.parse((await req('POST', '/oauth/register', { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client_name: 'ChatGPT', redirect_uris: ['https://chatgpt.com/connector_platform_oauth_redirect'] }) })).body);
+const verifier = crypto.randomBytes(32).toString('base64url'); const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+const q = new URLSearchParams({ response_type: 'code', client_id: reg.client_id, redirect_uri: reg.redirect_uris[0], code_challenge: challenge, code_challenge_method: 'S256', state: 'xyz' });
+console.log('consent page', (await req('GET', `/oauth/authorize?${q}`)).status);
+const bad = await req('POST', '/oauth/authorize', { headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `${q}&pair=000000` }); console.log('wrong code', bad.status, '(expect 403)');
+const pair = await (await fetch(`${L}/api/remote/pair`, { method: 'POST' })).json();
+const ok = await req('POST', '/oauth/authorize', { headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `${q}&pair=${pair.code}` });
+const code = new URL(ok.headers.location).searchParams.get('code'); console.log('redirect', ok.status, new URL(ok.headers.location).searchParams.get('state'));
+const tok = JSON.parse((await req('POST', '/oauth/token', { headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: reg.client_id, redirect_uri: reg.redirect_uris[0] }).toString() })).body);
+console.log('token', !!tok.access_token, tok.expires_in);
+const replay = await req('POST', '/oauth/token', { headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: reg.client_id, redirect_uri: reg.redirect_uris[0] }).toString() }); console.log('code replay', replay.status, '(expect 400)');
+const init = await req('POST', '/mcp', { headers: { authorization: `Bearer ${tok.access_token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } }) });
+console.log('mcp initialize', init.status, init.body.slice(0, 90));
+const list = await req('POST', '/mcp', { headers: { authorization: `Bearer ${tok.access_token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'mcp-protocol-version': '2025-06-18' }, body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }) });
+console.log('tools', (JSON.parse(list.body).result?.tools || []).length);
+const call = await req('POST', '/mcp', { headers: { authorization: `Bearer ${tok.access_token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'mcp-protocol-version': '2025-06-18' }, body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_projects', arguments: {} } }) });
+console.log('call', call.status, call.body.slice(0, 80));
+const ref = JSON.parse((await req('POST', '/oauth/token', { headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tok.refresh_token, client_id: reg.client_id }).toString() })).body); console.log('refresh', !!ref.access_token);
+const locMcp = await fetch(`${L}/mcp`, { method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: '{}' }); console.log('local mcp from foreign origin', locMcp.status, '(expect 403)');
+srv.close(); process.exit(0);

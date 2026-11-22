@@ -266,6 +266,14 @@ function book(provider = 'wmd', format = 'hc-a4-quer', pages = 4) {
   const evil = path.join(tmp, 'evil.billerbook');
   execFileSync('python3', ['-c', `import zipfile\nz=zipfile.ZipFile(${JSON.stringify(evil)},'w')\nz.writestr('manifest.json','{"format":"billerbook","version":1}')\nz.writestr('media/../../evil.txt','x')\nz.close()`]);
   await assert.rejects(importPackage(evil));
+  // Review 22.11.: an imported package keeps none of the sender's paths and no unknown tones
+  const crafted = path.join(tmp, 'crafted.billerbook');
+  execFileSync('python3', ['-c', `import zipfile,json\nsrc=zipfile.ZipFile(${JSON.stringify(f)})\nz=zipfile.ZipFile(${JSON.stringify(crafted)},'w')\nfor n in src.namelist():\n  d=src.read(n)\n  if n=='project.json':\n    j=json.loads(d); j['sources']={'folders':['/'],'captureone':{'snapshot':[{'id':'x','file':'/etc/x.jpg'}],'exportFolder':'/'}}\n    j['editions'][0]['pages'][0]['slots'][0]['tone']='/../../x'; j['editions'][0]['subset']=['1"/>']\n    d=json.dumps(j)\n  z.writestr(n,d)\nz.close()`]);
+  const im2 = await importPackage(crafted);
+  const p3 = await loadProject(im2.id);
+  assert.deepEqual(p3.sources.folders, [], 'folders of the sender dropped');
+  assert.ok(!p3.sources.captureone, 'Capture One source dropped');
+  assert.ok(p3.editions[0].pages[0].slots[0].tone == null && p3.editions[0].subset == null, 'unknown tone and stored subset removed');
   ok('.billerbook project file with photos round-trips; entries with ../ are refused');
 }
 

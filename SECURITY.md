@@ -47,6 +47,8 @@ Status: 22.11.2026 · Wiki project page: https://wiki.heidrich-digital.de/doc/bi
 | 18 | Remote events with stdio MCP | logged to stderr only, control characters removed | `test/security.mjs` |
 | 19 | Capture One collection ids with script code | passed as arguments to a fixed JXA script, never part of the script; Capture One tools not offered to remote clients | `test/captureone.mjs`, `test/oauth.mjs` |
 | 20 | IDML export with special characters in text and file names | XML escaped, control characters removed, link file names reduced to safe characters | `test/idml.mjs` |
+| 21 | Crafted tone value (`/../../x`) in a project or package, IDML export | tone dropped by `checkProject`, nothing written outside `Links/` | `test/idml.mjs`, `test/v011.mjs` |
+| 22 | Package with foreign `sources` (folders, Capture One snapshot with system paths) | sources reset to the package's own photos | `test/v011.mjs` |
 
 ## Deliberate exceptions
 - **No login on localhost.** Billerbook is a single-user desktop app; the local API trusts processes on the same Mac, like any desktop app does. Reviewed again if Billerbook ever runs as a server for several people.
@@ -55,6 +57,7 @@ Status: 22.11.2026 · Wiki project page: https://wiki.heidrich-digital.de/doc/bi
 
 ## Review
 - 22.11.2026: independent review (G3) found 4 P0, 5 P1, 13 P2. Fixed the same day; the re-check found no P0 and two new P1 (a redirect to a blocked address could end the process; remote events were logged to stdout and broke stdio MCP) plus three P2. All fixed and covered by `test/security.mjs`. Table on the wiki project page.
+- 22.11.2026, afternoon: independent review of the 0.11.0 additions (Capture One, IDML, page overview) found no P0, one P1 (tone value as path in the IDML export, reachable only through a crafted project file) and four P2. Fixed in 0.11.1; tests 21 and 22.
 
 ## Reporting
 Security issues: open a private advisory on GitHub (Security › Report a vulnerability) or write to the address in the imprint of billerbook.heidrich-digital.de.

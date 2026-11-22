@@ -7,6 +7,8 @@ const COLOR_KEYS = new Set(['color', 'bg', 'fill', 'stroke', 'background']);
 const FAMILY = /^[\w:. -]{1,80}$/;
 const FONT_ID = /^[\w-]{1,64}$/;
 const FONT_FACE = /^\d{3}-(normal|italic)$/;
+import { TONES } from './tones.js';
+const TONE_IDS = new Set(TONES.map((t) => t.id));
 
 export const isColor = (v) => typeof v === 'string' && COLOR.test(v.trim());
 // For string building: an unsafe value becomes the fallback.
@@ -24,6 +26,11 @@ export function checkProject(project, { fix = false } = {}) {
       if (COLOR_KEYS.has(k) && typeof v === 'string' && !isColor(v)) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
       if (k === 'opacity' && v != null && !(typeof v === 'number' && Number.isFinite(v))) { problems.push({ path: here, value: v }); if (fix) o[k] = safeNumber(v); continue; }
       if (k === 'family' && typeof v === 'string' && !FAMILY.test(v)) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
+      // Tones end up in file names (IDML links): only the known ids.
+      if (k === 'tone' && v != null && v !== '' && !(typeof v === 'string' && TONE_IDS.has(v))) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
+      if (k === 'toneStrength' && v != null && !(typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1)) { problems.push({ path: here, value: v }); if (fix) o[k] = safeNumber(v); continue; }
+      // A page subset only exists while exporting; a stored one is never legitimate.
+      if (k === 'subset' && /^editions\.\d+$/.test(at)) { problems.push({ path: here, value: '[subset]' }); if (fix) delete o[k]; continue; }
       if ((k === 'isbn' || k === 'addon') && v != null && !/^[\dXx -]{0,24}$/.test(String(v))) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
       if (v && typeof v === 'object') walk(v, here);
     }

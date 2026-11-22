@@ -1,0 +1,11 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const p = await b.newPage({ viewport: { width: 1600, height: 1000 } });
+p.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+await p.goto('http://localhost:4610/#k8t7onxc'); await p.waitForTimeout(3500);
+await p.click('#views button:nth-child(2)'); await p.waitForTimeout(3000);
+await p.screenshot({ path: '/tmp/ui/6-cover.png' });
+await p.click('#views button:nth-child(1)'); await p.waitForTimeout(1000);
+await p.click('#exportBtn'); await p.waitForTimeout(800);
+await p.screenshot({ path: '/tmp/ui/5-export.png' });
+b.close();

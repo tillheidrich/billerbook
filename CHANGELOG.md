@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.1 – 22 Nov 2026
+
+Security (independent review of the 0.11.0 additions)
+- IDML export: a tone value from a crafted project file could turn into a path and overwrite a JPEG outside the export folder. Tones are now checked against the known list on save, on import and in the export, and link files can only be written inside Links/.
+- IDML export: page labels and text are fully escaped, so a crafted project cannot break or extend the IDML package.
+- Page overview: control characters in names no longer stop the export; the sheet size is limited for extreme page ratios.
+- Importing a .billerbook file drops the sender's folders, catalogs and Capture One source and keeps only the photos inside the package.
+
 ## 0.11.0 – 22 Nov 2026
 
 Affinity, InDesign, Capture One

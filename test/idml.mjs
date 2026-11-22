@@ -74,3 +74,27 @@ assert.match(read('Resources/Graphic.xml'), /Color\/bb-1d2a22" Model="Process" S
 assert.ok(fs.existsSync(path.join(r.dir, 'LIESMICH.txt')));
 assert.ok(r.cover && fs.existsSync(r.cover), 'cover as its own IDML');
 console.log('ok IDML for Affinity/InDesign: package, pages and spreads, bleed, crops, links, tones, text, colours, cover file');
+
+// Review 22.11. P1: a tone from a crafted project must not become a path; P2: subset and odd characters are escaped
+{
+  const victim = path.join(tmp, 'victim'); fs.mkdirSync(victim);
+  const target = path.join(victim, 'IMG_0001.jpg');
+  fs.writeFileSync(target, 'original');
+  const pr2 = ops.newProject('Evil');
+  const ed2 = ops.addEdition(pr2, { provider: 'wmd', format: 'hc-a4-quer' });
+  ops.insertPages(pr2, ed2.id, 0, 4, 'leer');
+  ops.setLayout(pr2, ed2.id, 0, 'voll'); ops.placeImage(pr2, ed2.id, 0, 0, 'f:a');
+  ed2.pages[0].slots[0].tone = '/../../victim/IMG_0001';
+  const { checkProject } = await import('../public/lib/safe.js');
+  assert.ok(checkProject(pr2).some((p) => p.path.endsWith('.tone')), 'checkProject flags an unknown tone');
+  ed2.subset = ['1"/><Evil a="', 2, 3, 4];
+  ed2.pages[1].texts = [{ value: 'a￾b\uD800c' }];
+  ops.setLayout(pr2, ed2.id, 1, 'text');
+  const r2 = await exportIdml({ project: pr2, ed: ed2, pool, dir: path.join(tmp, 'evil'), base: 'e' });
+  assert.equal(fs.readFileSync(target, 'utf8'), 'original', 'no file outside Links/ is written');
+  assert.ok(fs.readdirSync(path.join(r2.dir, 'Links')).every((f) => /^[\w.-]+\.jpg$/.test(f)));
+  const parts2 = execFileSync('unzip', ['-Z1', r2.file]).toString().trim().split('\n').filter((f) => f.endsWith('.xml'));
+  execFileSync('python3', ['-c', 'import sys,zipfile,xml.dom.minidom as m\nz=zipfile.ZipFile(sys.argv[1])\n[m.parseString(z.read(n)) for n in sys.argv[2:]]', r2.file, ...parts2]);
+  assert.ok(!execFileSync('unzip', ['-p', r2.file, 'Spreads/Spread_s1.xml']).toString().includes('<Evil'), 'subset value is escaped');
+  console.log('ok IDML review fixes: tone cannot leave Links/, subset and stray characters escaped, checkProject flags tone');
+}

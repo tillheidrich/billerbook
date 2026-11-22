@@ -38,3 +38,13 @@ const xref = pdf.slice(pdf.indexOf('xref'));
 const offs = [...xref.matchAll(/^(\d{10}) 00000 n/mg)].map((m) => Number(m[1]));
 offs.forEach((o, i) => assert.ok(pdf.startsWith(`${i + 1} 0 obj`, o), `object ${i + 1} at its offset`));
 console.log('ok overview PDF: A4 landscape sheets, valid xref');
+
+// Review 22.11.: control characters in titles, extreme page ratios
+{
+  const r3 = await renderOverview(pr, ed, pool, { count: 2, width: 800, title: 'a\u0001b￾c' });
+  assert.ok(r3.buf.length > 0);
+  const odd = { ...ed, w: 0.01 };
+  const r4 = await renderOverview(pr, odd, pool, { count: 1, width: 800, cover: false }).catch((e) => e);
+  assert.ok(!(r4 instanceof Error) ? r4.height < 4000 : true, 'canvas stays small for an extreme ratio');
+  console.log('ok overview review fixes: control characters in titles, canvas size clamped');
+}

@@ -1,0 +1,12 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const p = await (await b.newContext({ viewport: { width: 1600, height: 1000 }, colorScheme: 'light' })).newPage();
+p.on('dialog', (d) => d.accept());
+p.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+p.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
+await p.goto('http://localhost:4610/#k8t7onxc'); await p.waitForTimeout(3000);
+await p.click('text=Import'); await p.waitForTimeout(500);
+await p.setInputFiles('input[type=file]', '/tmp/ui/test.pdf');
+await p.click('text=Import PDF'); await p.waitForTimeout(8000);
+await p.screenshot({ path: '/tmp/ui/13-pdf.png' });
+b.close();

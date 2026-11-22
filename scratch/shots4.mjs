@@ -1,0 +1,13 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const p = await b.newPage({ viewport: { width: 1600, height: 1000 } });
+p.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+await p.goto('http://localhost:4610/#k8t7onxc'); await p.waitForTimeout(3500);
+await p.keyboard.press('ArrowRight'); await p.keyboard.press('ArrowRight'); await p.waitForTimeout(1500);
+const fr = await p.$$('.frame.has'); await fr[0].click(); await p.waitForTimeout(800);
+await p.click('text=Edit frames freely'); await p.waitForTimeout(1500);
+const fr2 = await p.$$('.frame.has'); await fr2[0].click(); await p.waitForTimeout(800);
+const mv = await p.$('.frame.sel .handle.move'); const bb = await mv.boundingBox();
+await p.mouse.move(bb.x + 10, bb.y + 10); await p.mouse.down(); await p.mouse.move(bb.x + 120, bb.y - 60, { steps: 8 }); await p.mouse.up(); await p.waitForTimeout(1200);
+await p.screenshot({ path: '/tmp/ui/8-free.png' });
+b.close();

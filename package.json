@@ -1,6 +1,6 @@
 {
   "name": "billerbook",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Open-source photo book layout for print: one photo pool, several editions of the same book, Lightroom Classic integration, print-ready PDFs for any print shop, an MCP server for AI assistants.",
   "type": "module",
   "license": "AGPL-3.0-only",
