@@ -534,6 +534,9 @@ K = {
 
 # ---------- Rendering (Benchkey layout) ----------
 MCP_DOC = REPO + "/blob/main/docs/mcp.md"
+import hashlib as _hl
+# Content hash in the stylesheet URL: browsers keep /assets/ for a week, a changed file gets a new URL.
+CSS_V = _hl.sha256(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "site.css"), "rb").read()).hexdigest()[:10]
 LOGO = '<img src="{root}assets/img/icon.png" alt="" width="22" height="22">'
 
 def urls(t, root):
@@ -614,7 +617,7 @@ def head2(t, title, desc, page, root, ld=None, og="og.jpg"):
 <link rel="icon" type="image/png" href="{root}assets/img/favicon.png">
 <link rel="apple-touch-icon" href="{root}assets/img/apple-touch-icon.png">
 <link rel="preload" href="{root}assets/fonts/geist-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="{root}assets/site.css">
+<link rel="stylesheet" href="{root}assets/site.css?v={CSS_V}">
 {"".join('<script type="application/ld+json">' + _json.dumps(x, ensure_ascii=False).replace("</", "<\\/") + '</script>' for x in (ld or []))}
 </head>
 <body>"""
