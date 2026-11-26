@@ -3,6 +3,7 @@
 --   Billerbook › <project> › <edition> – missing   photos from the project's Lightroom
 --                                                   collections that are not in the edition yet
 -- Billerbook only reads the catalog; this plug-in is the only part that writes, and only these collections.
+-- Export.lua additionally writes full-resolution JPEGs into the project's export folder (never into the catalog).
 local LrApplication = import 'LrApplication'
 local LrHttp = import 'LrHttp'
 local LrPathUtils = import 'LrPathUtils'
@@ -41,17 +42,20 @@ function Sync.fetch()
   if not body or (headers and headers.status and headers.status ~= 200) then
     return nil, 'Billerbook is not running. Open the Billerbook app and try again.'
   end
-  local hash, editions, cur = nil, {}, nil
+  local hash, editions, projects, cur, proj = nil, {}, {}, nil, nil
   for line in string.gmatch(body, '[^\n]+') do
     local kind, a, b, c = string.match(line, '^(%a)\t([^\t]*)\t?([^\t]*)\t?([^\t]*)$')
     if kind == 'H' then hash = a
-    elseif kind == 'E' then cur = { project = a, edition = b, id = c, ids = {}, files = {}, missing = {} }; editions[#editions + 1] = cur
+    elseif kind == 'P' then proj = { id = a, name = b, folder = c, editions = {} }; projects[#projects + 1] = proj
+    elseif kind == 'E' then
+      cur = { project = a, edition = b, id = c, ids = {}, files = {}, missing = {} }; editions[#editions + 1] = cur
+      if proj and proj.name == a then proj.editions[#proj.editions + 1] = cur end
     elseif cur and kind == 'I' then cur.ids[#cur.ids + 1] = a
     elseif cur and kind == 'F' then cur.files[#cur.files + 1] = a
     elseif cur and kind == 'M' then cur.missing[#cur.missing + 1] = a
     end
   end
-  return { hash = hash, editions = editions }
+  return { hash = hash, editions = editions, projects = projects }
 end
 
 local function photosFor(catalog, uuids, files)

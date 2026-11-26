@@ -49,6 +49,9 @@ Status: 22.11.2026 · Wiki project page: https://wiki.heidrich-digital.de/doc/bi
 | 20 | IDML export with special characters in text and file names | XML escaped, control characters removed, link file names reduced to safe characters | `test/idml.mjs` |
 | 21 | Crafted tone value (`/../../x`) in a project or package, IDML export | tone dropped by `checkProject`, nothing written outside `Links/` | `test/idml.mjs`, `test/v011.mjs` |
 | 22 | Package with foreign `sources` (folders, Capture One snapshot with system paths) | sources reset to the package's own photos | `test/v011.mjs` |
+| 23 | `POST /api/lightroom/exported` from a foreign origin, as text/plain, with an unknown or crafted project id | 403 / refused / 404 without file paths; the endpoint only drops a cache | `test/lrexport.mjs` |
+| 24 | Project name or id with `../`, slashes or control characters | default export folder stays inside `~/Pictures/Billerbook` | `test/lrexport.mjs` |
+| 25 | RAW preview via Quick Look | `execFile` with fixed arguments (no shell), path from the catalog, at most four processes, 30 s timeout | review |
 
 ## Deliberate exceptions
 - **No login on localhost.** Billerbook is a single-user desktop app; the local API trusts processes on the same Mac, like any desktop app does. Reviewed again if Billerbook ever runs as a server for several people.

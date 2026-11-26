@@ -14,7 +14,7 @@ import { loadProfiles, saveProfile, deleteProfile, providers, readCoverTemplate 
 import { LAYOUT_ORDER, COVER_ORDER, coverFrames, pageOwner, buildFrames } from './public/lib/layouts.js';
 import { findProvider, profileFromEdition } from './public/lib/providers.js';
 import { spineOf, coverSpec, luminance } from './public/lib/geometry.js';
-import { listProjects, loadProject, saveProject, createProject, buildPool, dropPool, thumbnail, uploadDir, focalProgress, DATA } from './lib/store.mjs';
+import { listProjects, loadProject, saveProject, createProject, buildPool, dropPool, thumbnail, uploadDir, focalProgress, lrExportFolder, DATA } from './lib/store.mjs';
 import { listCollections, readLightroomBook, bookToPages } from './lib/catalog.mjs';
 import { exportInterior, exportCover } from './lib/pdf.mjs';
 import { renderSpread, renderCover, renderPage } from './lib/preview.mjs';
@@ -256,6 +256,7 @@ async function lightroomUsage({ missing = false } = {}) {
       const ids = [], files = [];
       for (const k of keys) { if (k.startsWith('lr:')) ids.push(k.slice(3)); else if (k.startsWith('f:')) files.push(k.slice(2)); }
       const row = { projectId: pr.id, project: pr.name, editionId: ed.id, edition: ed.name, ids, files, pages: ed.pages.length };
+      if (pr.sources?.lightroom?.catalog) row.exportFolder = lrExportFolder(pr);
       if (missing && pr.sources?.lightroom?.catalog) {
         try {
           const pool = await buildPool(pr);
@@ -504,7 +505,11 @@ async function route(req, res) {
   if (p === '/api/lightroom/usage.txt') {
     const u = await lightroomUsage({ missing: true });
     const lines = [];
+    let lastProject = null;
     for (const x of u) {
+      // P project id, name, folder for full-resolution exports (Lightroom plug-in: "Export print files")
+      if (x.exportFolder && x.projectId !== lastProject) { lastProject = x.projectId; lines.push(['P', x.projectId, clean(x.project), clean(x.exportFolder)].join('\t')); }
+      // E lines keep four fields: older plug-ins match exactly that shape. Their project is the P line before them.
       lines.push(['E', clean(x.project), clean(x.edition), x.editionId].join('\t'));
       for (const id of x.ids) lines.push(`I\t${id}`);
       for (const f of x.files) lines.push(`F\t${clean(f)}`);
@@ -514,6 +519,16 @@ async function route(req, res) {
     const hash = crypto.createHash('sha1').update(body).digest('hex').slice(0, 12);
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(`H\t${hash}\n${body}\n`);
+  }
+  // The Lightroom plug-in exported print files: rebuild the pool so the editor shows them.
+  if (p === '/api/lightroom/exported' && req.method === 'POST') {
+    const b = await body(req, 64 << 10);
+    const id = String(b?.project || '').replace(/[^\w-]/g, '');
+    if (!id) throw httpError(400, 'project missing');
+    try { await loadProject(id); } catch { throw httpError(404, 'project not found'); }
+    dropPool(id);
+    broadcast({ type: 'pool', id });
+    return json(res, { ok: true });
   }
   if (p === '/api/lightroom/install-plugin' && req.method === 'POST') return json(res, await installLightroomPlugin());
   // Only reads a cover template (the editor applies it itself when the edition is saved).

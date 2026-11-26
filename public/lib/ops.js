@@ -192,6 +192,21 @@ export function addImages(project, edId, page, keys) {
   for (const k of keys) placeImage(project, edId, page, null, k);
 }
 
+// Move a photo from its frame to another page (e.g. dropped on a spread in the page strip).
+// The photo keeps its tone; the crop starts fresh because the new frame has another shape.
+export function moveImage(project, edId, from, toPage) {
+  const ed = getEdition(project, edId);
+  const src = ed.pages[pageOwner(ed, from.page).owner]?.slots?.[from.slot];
+  if (!src?.key) return false;
+  if (pageOwner(ed, from.page).owner === pageOwner(ed, toPage).owner) return false;
+  removeImage(project, edId, from.page, from.slot);
+  placeImage(project, edId, toPage, null, src.key);
+  const p = ed.pages[pageOwner(ed, toPage).owner];
+  const moved = p.slots.find((x) => x?.key === src.key && !x.tone);
+  if (moved && src.tone) { moved.tone = src.tone; if (src.toneStrength != null) moved.toneStrength = src.toneStrength; }
+  return true;
+}
+
 export function removeImage(project, edId, page, slot) {
   const ed = getEdition(project, edId);
   const p = ed.pages[pageOwner(ed, page).owner];
@@ -254,6 +269,26 @@ export function makeFullBleed(project, edId, page, slot) {
 
 // ---------- Auto fill ----------
 // items: pool items in the desired order. Returns number of pages created.
+// Print shops take page counts in steps (mostly 2, magazines 4): fill up with blank pages at the end.
+export function padToStep(ed) {
+  const step = ed.pageStep || 0;
+  let added = 0;
+  while (step > 1 && ed.pages.length % step) { ed.pages.push(newPage('leer')); added++; }
+  return added;
+}
+
+// Order for automatic layout: time (capture time), lightroom (as in the Lightroom collection, also
+// custom order), name (file name), rating (best first, then time), given (as passed, e.g. a selection).
+export function orderItems(items, order = 'time') {
+  const t = (it) => (it.time ? Date.parse(it.time) : 0) || 0;
+  const list = [...items];
+  if (order === 'given') return list;
+  if (order === 'lightroom') return list.sort((a, b) => (a.lrOrder ?? 1e9) - (b.lrOrder ?? 1e9) || t(a) - t(b));
+  if (order === 'name') return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true, sensitivity: 'base' }));
+  if (order === 'rating') return list.sort((a, b) => (b.rating || 0) - (a.rating || 0) || t(a) - t(b));
+  return list.sort((a, b) => t(a) - t(b));
+}
+
 export function autoFill(project, edId, items, opts = {}) {
   const ed = getEdition(project, edId);
   const perPage = Math.max(1, Math.min(12, opts.perPage || 3));
@@ -261,7 +296,10 @@ export function autoFill(project, edId, items, opts = {}) {
   const gapH = (opts.breakHours ?? 36) * 3600e3;
   const pageAspect = ed.w / ed.h;
   const out = [];
-  if (opts.style === 'monograph') return monographFill(ed, items, opts, pageAspect);
+  items = orderItems(items, opts.order);
+  // Time gaps only make sense when the photos run in time order.
+  if (opts.order && opts.order !== 'time' && opts.breakOnGaps == null) opts = { ...opts, breakOnGaps: false };
+  if (opts.style === 'monograph') { const r = monographFill(ed, items, opts, pageAspect); r.added = opts.pad ? padToStep(ed) : 0; return r; }
   let cur = [], last = null;
   const flush = () => { if (cur.length) out.push(newPage('auto', cur.map((k) => ({ key: k })))); cur = []; };
   let chap = null;
@@ -288,7 +326,7 @@ export function autoFill(project, edId, items, opts = {}) {
   else if (opts.at != null) ed.pages.splice(opts.at, 0, ...out);
   else ed.pages.push(...out);
   normalize(ed);
-  return { pages: out.length };
+  return { pages: out.length, added: opts.pad ? padToStep(ed) : 0 };
 }
 
 // Applies a book template: font, text styles, page colour and graphic, cover design, page numbers.

@@ -137,6 +137,7 @@ function connectEvents() {
   const es = new EventSource('/api/events');
   es.onmessage = (m) => {
     const ev = JSON.parse(m.data);
+    if (ev.type === 'pool' && S.project && ev.id === S.project.id) { loadPool(true).then(() => { renderAll(); loadPreflight(); }); return; }
     if (ev.type === 'project' && S.project && ev.id === S.project.id && ev.by !== CLIENT && ev.version > S.project.version && !S.pendingSave) {
       const srcBefore = JSON.stringify(S.project.sources);
       reloadProject().then(() => { if (JSON.stringify(S.project.sources) !== srcBefore) loadPool().then(renderAll); });
@@ -704,7 +705,7 @@ function miniSpread(idx, height) {
   const w = h('div', { class: `mini-wrap${idx === S.spread ? ' cur' : ''}`, 'data-spread': idx, draggable: idx > 0 ? 'true' : null }, box, h('div', { class: 'mini-label num' }, label));
   w.addEventListener('click', () => { S.spread = idx; S.sel = null; S.page = null; if (S.view !== 'pages') S.view = 'pages'; renderAll(); });
   w.addEventListener('dragstart', (ev) => ev.dataTransfer.setData('text/fbs-spread', String(idx)));
-  w.addEventListener('dragover', (ev) => { if (ev.dataTransfer.types.includes('text/fbs-spread') || ev.dataTransfer.types.includes('text/fbs-keys')) { ev.preventDefault(); w.classList.add('drop'); } });
+  w.addEventListener('dragover', (ev) => { const ty = ev.dataTransfer.types; if (ty.includes('text/fbs-spread') || ty.includes('text/fbs-keys') || ty.includes('text/fbs-slot')) { ev.preventDefault(); w.classList.add('drop'); } });
   w.addEventListener('dragleave', () => w.classList.remove('drop'));
   w.addEventListener('drop', (ev) => {
     ev.preventDefault(); w.classList.remove('drop');
@@ -716,7 +717,15 @@ function miniSpread(idx, height) {
       return;
     }
     const keys = ev.dataTransfer.getData('text/fbs-keys');
-    if (keys) { const target = ri ?? li; mutate((p) => ops.addImages(p, e.id, target, JSON.parse(keys))); }
+    if (keys) { const target = ri ?? li; mutate((p) => ops.addImages(p, e.id, target, JSON.parse(keys))); return; }
+    // A photo dragged by its handle from a frame: move it to this spread (right page, or left if there is none).
+    const slot = ev.dataTransfer.getData('text/fbs-slot');
+    if (slot) {
+      const s = JSON.parse(slot);
+      if (s.kind !== 'page') return;
+      mutate((p) => ops.moveImage(p, e.id, { page: s.page, slot: s.slot }, ri ?? li));
+      toast(t('moveToSpread'));
+    }
   });
   return w;
 }
@@ -1405,12 +1414,20 @@ function editionModal(existing) {
   }, { wide: true });
 }
 
+// A selection is laid out in the chosen order, not in the order the photos were clicked.
+function orderedSelection(order) {
+  return ops.orderItems(S.pool.filter((it) => S.poolSel.has(it.key)), order).map((it) => it.key);
+}
+
 function autoModal() {
-  const o = { perPage: 3, highlightRating: 5, filter: 'unplaced', minRating: 0, breakHours: 36, replace: false, style: 'grid', rightHand: false };
+  const o = { perPage: 3, highlightRating: 5, filter: 'unplaced', minRating: 0, breakHours: 36, replace: false, style: 'grid', rightHand: false, order: S.project.sources?.lightroom?.catalog ? 'lightroom' : 'time' };
   modal((close) => [
     h('h2', {}, t('autoTitle')),
     h('label', { class: 'field' }, h('span', {}, t('autoStyle')), sel([['grid', t('autoGrid')], ['monograph', t('autoMono')]], o.style, (v) => { o.style = v; })),
     h('label', { class: 'row' }, h('input', { type: 'checkbox', onchange: (ev) => { o.rightHand = ev.target.checked; } }), t('autoRightHand')),
+    h('label', { class: 'field' }, h('span', {}, t('autoOrder')), sel([
+      ...(S.project.sources?.lightroom?.catalog ? [['lightroom', t('orderLightroom')]] : []),
+      ['time', t('orderTime')], ['name', t('orderName')], ['rating', t('orderRating')]], o.order, (v) => { o.order = v; })),
     h('div', { class: 'grid2' },
       h('label', { class: 'field' }, h('span', {}, t('perPage')), h('input', { class: 'input num', type: 'number', min: 1, max: 12, value: o.perPage, onchange: (ev) => { o.perPage = Number(ev.target.value); } })),
       h('label', { class: 'field' }, h('span', {}, t('highlight')), sel([[0, t('none')], [3, '★★★'], [4, '★★★★'], [5, '★★★★★']], o.highlightRating, (v) => { o.highlightRating = Number(v); }))),
@@ -1422,7 +1439,7 @@ function autoModal() {
     h('label', { class: 'row' }, h('input', { type: 'checkbox', onchange: (ev) => { o.replace = ev.target.checked; } }), t('replacePages')),
     h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('cancel')),
       h('button', { class: 'btn primary', onclick: async () => {
-        const args = { edition: ed().id, ...o, keys: S.poolSel.size > 1 ? [...S.poolSel] : undefined };
+        const args = { edition: ed().id, ...o, pad: true, keys: S.poolSel.size > 1 ? orderedSelection(o.order) : undefined };
         if (S.pendingSave) await save();
         const r = await api(`/api/project/${S.project.id}/op`, { body: { op: 'autoFill', args } });
         S.hist.push(snapshot()); S.project = r.project; changed();

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.12.0 – 26 Nov 2026
+
+From a full run with a real Lightroom Classic catalog (two yearly books of 241 pages, 10,700 photos of 2026).
+
+Lightroom
+- Plug-in: *Library › Plug-in Extras › Export print files for Billerbook…* exports the project's photos as full-size JPEGs with all Lightroom edits into a folder Billerbook knows (`~/Pictures/Billerbook/<project>`), unless you set your own. Photos already exported and not edited since are skipped, so running it again after edits only renders what changed. The editor picks the files up while the export runs. No more manual export and folder setup.
+- Photos without a Lightroom preview no longer show as blank pages. On a Mac, Billerbook shows the preview embedded in the RAW/DNG original (via Quick Look, without your Lightroom edits); a photo whose original is offline shows as a grey frame with its file name.
+- Automatic layout can follow the order of your Lightroom collection, including a custom (drag-and-drop) order and the collection's sort by capture time, file name, rating or edit time, ascending or descending. Also by capture date, file name or stars. Default is the Lightroom order when the project uses a catalog. Time-gap page breaks apply to the capture-date order only.
+- Plug-in menus in German and English.
+
+Editor
+- Drag a photo by its ⇄ handle onto any spread in the page strip to move it there.
+- Automatic layout fills up to the print shop's page step (WIRmachenDRUCK: even page count) with blank pages at the end.
+
+AI / MCP
+- `auto_layout` has `order` (`lightroom`, `time`, `name`, `rating`, `given`).
+- `list_formats` finds a print shop by name in any spelling ("WIRmachenDRUCK", "wir machen druck") as well as by id.
+
 ## 0.11.1 – 22 Nov 2026
 
 Security (independent review of the 0.11.0 additions)

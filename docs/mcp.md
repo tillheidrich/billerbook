@@ -59,7 +59,7 @@ A remote assistant works on your photo book projects only: it gets no tools that
 | `save_print_profile` | create or share a profile for any print shop, also derived from an edition (local clients only) |
 | `list_images` | photo pool with usage; filter `unplaced` for completeness |
 | `add_edition`, `update_edition` | editions, format, spine, margins, colour, page numbers, sharpening |
-| `auto_layout` | fill pages chronologically |
+| `auto_layout` | fill pages automatically, in capture-time order or as sorted in the Lightroom collection (`order`) |
 | `get_pages`, `view_spread` | read the layout; `view_spread` returns the spread as an image |
 | `view_overview` | the whole book as a contact sheet with page numbers, cover first; `from` and `count` page through long books |
 | `list_captureone_collections`, `use_captureone` | Capture One (Mac, app running): albums, projects and groups; use them as the photo source, processed files matched from an export folder |

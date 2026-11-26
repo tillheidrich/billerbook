@@ -102,10 +102,11 @@ Projects live in `~/Library/Application Support/Billerbook` on macOS (`~/.biller
 
 ## Workflow with Lightroom Classic
 
-1. Put the photos for the book into a collection.
+1. Put the photos for the book into a collection. Sort it the way you like, also by hand: Billerbook can lay out in that order.
 2. In Billerbook: **Sources** → choose the catalog → tick the collection.
-3. For printing, export that collection from Lightroom as full-size JPEG or TIFF into one folder (file names like the originals) and set it as the **export folder**. Until then Billerbook shows Lightroom's previews and preflight lists the photos without a print file.
-4. Optional: import a book you already made in Lightroom's Book module as a new edition.
+3. In Lightroom: *Library › Plug-in Extras › Export print files for Billerbook…* (needs the plug-in, see below). It exports the photos as full-size JPEGs with your edits into `~/Pictures/Billerbook/<project>`, and Billerbook uses them for the screen and for printing. Run it again after editing photos: only changed photos are exported again. Without the plug-in, export the collection yourself as full-size JPEG or TIFF (file names like the originals) and set that folder as the **export folder**.
+4. Until the files are there, Billerbook shows Lightroom's previews, or on a Mac the preview inside the RAW file; preflight lists the photos without a print file.
+5. Optional: import a book you already made in Lightroom's Book module as a new edition.
 
 ## Keyboard
 
@@ -133,7 +134,9 @@ Projects live in `~/Library/Application Support/Billerbook` on macOS (`~/.biller
 - **Billerbook › your project › Hardcover**: the photos in that edition
 - **Billerbook › your project › Hardcover – missing**: photos from the project's Lightroom collections that are not in it yet
 
-The plug-in updates them every 20 seconds while Billerbook is open (switch this off in the Plug-in Manager), or on demand with *Library › Plug-in Extras › Sync book collections now*. It only creates and fills these collections. Source: [`lightroom/Billerbook.lrplugin`](lightroom/Billerbook.lrplugin).
+The plug-in updates them every 20 seconds while Billerbook is open (switch this off in the Plug-in Manager), or on demand with *Library › Plug-in Extras › Sync book collections now*. It only creates and fills these collections.
+
+*Export print files for Billerbook…* writes full-size JPEGs (sRGB, quality 95, no output sharpening, metadata kept) of a project's photos into its export folder, either all photos of the project's collections or only those placed in the book. Files are named like the originals, so Billerbook matches them by name. The catalog is not changed. Source: [`lightroom/Billerbook.lrplugin`](lightroom/Billerbook.lrplugin).
 
 ## AI / MCP
 

@@ -145,7 +145,10 @@ server.tool('list_formats', 'Print shops (built-in and the user’s own profiles
   provider: z.string().optional().describe('Only this print shop'),
 }, async (a) => {
   const list = await call('/api/profiles');
-  return text(list.filter((p) => !a.provider || p.id === a.provider).map((p) => ({
+  // Accept the id ("wmd") or the name in any spelling ("WIRmachenDRUCK", "wir machen druck").
+  const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const want = norm(a.provider);
+  return text(list.filter((p) => !want || norm(p.id) === want || norm(p.name).startsWith(want)).map((p) => ({
     provider: p.id, name: p.name, region: p.region, userProfile: !!p.user, notes: p.notes?.en, sources: p.sources,
     bindings: Object.fromEntries(Object.entries(p.bindings).map(([k, b]) => [k, {
       status: b.status, interior: b.interior, blankEnds: b.blankEnds, bleed: b.bleed, safety: b.safety, glue: b.glue, pages: b.pages, colour: b.colour,
@@ -354,7 +357,7 @@ server.tool('update_edition', 'Change edition settings: format, spine width (mm,
   return text('ok');
 });
 
-server.tool('auto_layout', 'Lay out photos automatically in chronological order: new page at time gaps, high-rated photos get their own page. Appends by default.', {
+server.tool('auto_layout', 'Lay out photos automatically, by default in chronological order with a new page at time gaps (or in Lightroom collection order, file name or rating); high-rated photos get their own page. Appends by default.', {
   project: P, edition: E,
   per_page: z.number().default(3), highlight_rating: z.number().default(5).describe('0 disables full pages for top-rated photos'),
   filter: z.enum(['all', 'unplaced', 'nowhere']).default('unplaced'), min_rating: z.number().optional(),
@@ -362,9 +365,11 @@ server.tool('auto_layout', 'Lay out photos automatically in chronological order:
   replace: z.boolean().default(false), at: z.number().optional(), break_hours: z.number().default(36),
   style: z.enum(['grid', 'monograph']).default('grid').describe('grid: several photos per page. monograph: one photo per page in canon margins (photo-book style), top-rated full bleed, every fifth a small "breathing" photo'),
   right_hand: z.boolean().default(false).describe('monograph only: photos only on right pages, left pages stay white'),
+  order: z.enum(['time', 'lightroom', 'name', 'rating', 'given']).default('time').describe('time: capture time. lightroom: as sorted in the Lightroom collection (also custom order). name: file name. rating: best first. given: the order of keys'),
 }, async (a) => {
   const pid = await projectId(a.project);
   const r = await op(pid, 'autoFill', {
+    order: a.keys && a.order === 'time' ? 'given' : a.order, pad: true,
     edition: await editionId(pid, a.edition), perPage: a.per_page, highlightRating: a.highlight_rating, filter: a.filter,
     minRating: a.min_rating, keys: a.keys, replace: a.replace, at: a.at, breakHours: a.break_hours, style: a.style, rightHand: a.right_hand,
   });
