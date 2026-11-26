@@ -304,7 +304,13 @@ def llms_txt():
              "- 208 formats in 12 print profiles (Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital, CEWE PDF to Book, WhiteWall, PrestoPhoto, WIRmachenDRUCK, standard sizes, custom), plus a special size with free width and height for every binding.",
              "- Magazines and booklets: saddle stitching, pages in steps of four, cover inside the interior or as a separate four-page PDF (U1-U4).",
              "- Reads a print shop's data sheet PDF (trim and data size, bleed, safety margin, spine, wrap, page rules, colour, ICC) and sets the edition up from it (MCP tools read_print_spec and apply_print_spec).",
-             "- Seven book templates (monograph, year book, gallery, botanical, travel journal, wedding, Christmas year review), nine bundled open-licence typefaces and your own fonts, text printed as outlines, black and white and toning, background graphics, ISBN barcodes, soft proof against the printer's CMYK profile.",
+             "- 15 book styles (monograph, year book, gallery, botanical, travel journal, wedding, Christmas year review, reportage, contemporary document, cinematic, backstage, street, classic photo book, collage, memories). A style can restyle an existing book and keep its pages.",
+             "- Colours for page background, every text style, graphics and cover. Fonts: nine bundled open-licence typefaces, uploaded TTF/OTF/WOFF, and the fonts installed on the Mac (including .ttc collections). Adobe Fonts activated through Creative Cloud are not available. Text is printed as outlines.",
+             "- Manual arrangement: drag spreads and photos, move a photo to another page, crop with a fixed aspect ratio, order pages by capture time, file name, rating or the sort order of the Lightroom collection.",
+             "- No page limit in Billerbook itself (tested with 600 pages); the limit is the print shop's (for example Blurb's 240 pages).",
+             "- Black and white and toning, background graphics, ISBN barcodes, soft proof against the printer's CMYK profile.",
+             "- Lightroom Classic plug-in exports full-resolution print files of the book's photos with your current edits.",
+             "- Built for photo books. Text pages, chapter pages and captions are supported, but text does not flow from one page to the next, so it is not a tool for novels or text-only books.",
              "- Other outputs: proof PDF, screen PDF, interactive HTML book for websites, EPUB 3 fixed layout, CBZ, Instagram carousel, page images, file list for Finder and Lightroom, .billerbook project file. Imports PDFs, web pages and HTML.",
              "- Capture One albums as photo source (Mac); IDML export for Affinity and InDesign; page overview PDF.",
              "- MCP server with 51 tools for Claude Desktop, Codex, Cursor (local) and ChatGPT or claude.ai (remote, OAuth 2.1 with PKCE and a pairing code; remote clients get no file-path tools).",
@@ -938,7 +944,7 @@ def main():
         urls_ += [p, p + k['slug_how'] + "/", p + k['slug_ai'] + "/", p + t['shops_slug'] + "/", p + t['sc_slug'] + "/", p + "impressum.html", p + "datenschutz.html"]
     w("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {BASE}sitemap.xml\n")
     w("llms.txt", llms_txt())
-    w("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{x}</loc></url>" for x in urls_) + "</urlset>\n")
+    w("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{x}</loc><lastmod>{__import__('datetime').date.today().isoformat()}</lastmod></url>" for x in urls_) + "</urlset>\n")
     print("built", pub)
 
 if __name__ == "__main__": main()
