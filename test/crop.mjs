@@ -27,6 +27,10 @@ assert.equal('aspect' in ed.pages[1].slots[0], false);
 const [back] = buildFrames(ed, 1, aspect).filter((x) => x.kind === 'image');
 assert.ok(Math.abs(back.w / back.h - 2 / 3) < 0.01);
 
+// A patch cannot reach the prototype
+ops.updateSlot(pr, ed.id, 1, 0, JSON.parse('{"__proto__": {"polluted": 1}}'));
+assert.equal(({}).polluted, undefined); assert.equal(ed.pages[1].slots[0].polluted, undefined);
+
 // Only plain ratios between 1:5 and 5:1 survive a save
 ed.pages[1].slots[0].aspect = 99;
 const probs = checkProject(pr, { fix: true });

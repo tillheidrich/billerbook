@@ -235,7 +235,10 @@ export function updateSlot(project, edId, page, slot, patch) {
   const p = ed.pages[pageOwner(ed, page).owner];
   if (!p.slots[slot]) return;
   // null (or undefined) removes a setting: JSON drops undefined, so MCP and API calls send null.
-  for (const [k, v] of Object.entries(patch || {})) { if (v == null) delete p.slots[slot][k]; else p.slots[slot][k] = v; }
+  for (const [k, v] of Object.entries(patch || {})) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    if (v == null) delete p.slots[slot][k]; else p.slots[slot][k] = v;
+  }
 }
 
 export function setText(project, edId, page, idx, value) {
