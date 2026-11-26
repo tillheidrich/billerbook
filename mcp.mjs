@@ -432,13 +432,15 @@ server.tool('place_images', 'Place images on a page. With slot: into that frame.
   return text('ok');
 });
 
-server.tool('adjust_image', 'Crop control for one frame: zoom ≥ 1, ox/oy from -1 (left/top) to 1 (right/bottom), fit fill|contain.', {
+server.tool('adjust_image', 'Crop control for one frame: zoom ≥ 1, ox/oy from -1 (left/top) to 1 (right/bottom), fit fill|contain, aspect = crop ratio like Lightroom (1 = square, 0.8 = 4:5, 1.5 = 3:2, 0 = the photo\'s own). Layouts that follow the photos (auto, plate) shape the frame to that ratio.', {
   project: P, edition: E, page: PAGE, slot: z.number(), zoom: z.number().optional(), ox: z.number().optional(), oy: z.number().optional(), fit: z.enum(['fill', 'contain']).optional(),
+  aspect: z.number().min(0).max(5).optional(),
 }, async (a) => {
   const pid = await projectId(a.project);
   const patch = {};
+  if (a.aspect != null) Object.assign(patch, { aspect: a.aspect >= 0.2 ? a.aspect : null, zoom: 1, ox: 0, oy: 0 });
   for (const k of ['zoom', 'ox', 'oy']) if (a[k] != null) patch[k] = a[k];
-  if (a.fit) patch.fit = a.fit === 'contain' ? 'contain' : undefined;
+  if (a.fit) patch.fit = a.fit === 'contain' ? 'contain' : null;
   await op(pid, 'updateSlot', { edition: await editionId(pid, a.edition), page: a.page, slot: a.slot, patch });
   return text('ok');
 });

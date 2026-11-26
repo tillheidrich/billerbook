@@ -28,6 +28,8 @@ export function checkProject(project, { fix = false } = {}) {
       if (k === 'family' && typeof v === 'string' && !FAMILY.test(v)) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
       // Tones end up in file names (IDML links): only the known ids.
       if (k === 'tone' && v != null && v !== '' && !(typeof v === 'string' && TONE_IDS.has(v))) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
+      // Crop aspect of a photo in a frame: a plain ratio between 1:5 and 5:1.
+      if (k === 'aspect' && /\.slots\.\d+$/.test(at) && v != null && !(typeof v === 'number' && Number.isFinite(v) && v >= 0.2 && v <= 5)) { problems.push({ path: here, value: v }); if (fix) delete o[k]; continue; }
       if (k === 'toneStrength' && v != null && !(typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1)) { problems.push({ path: here, value: v }); if (fix) o[k] = safeNumber(v); continue; }
       // A page subset only exists while exporting; a stored one is never legitimate.
       if (k === 'subset' && /^editions\.\d+$/.test(at)) { problems.push({ path: here, value: '[subset]' }); if (fix) delete o[k]; continue; }

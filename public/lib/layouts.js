@@ -44,6 +44,16 @@ function canonBox(W, H, side) {
   const x = side === 'L' ? outer : inner;
   return { x, y: top, w: W - inner - outer, h: H - top - bottom };
 }
+// Box for a single plate. The canon's wide margins suit a photo that runs along the canon block;
+// a photo that runs across it (portrait on a landscape page, landscape on a portrait page) would
+// shrink, so that axis gets narrow margins and the photo takes as much of the page as it can.
+function plateBox(c, aspect) {
+  const b = canonBox(c.W, c.H, c.side);
+  const a = aspect || 1.5;
+  if (a < b.w / b.h) { const top = c.H * 0.06, bottom = c.H * 0.09; return { ...b, y: top, h: c.H - top - bottom }; }
+  const inner = c.W * 0.07, outer = c.W * 0.1;
+  return { ...b, x: c.side === 'L' ? outer : inner, w: c.W - inner - outer };
+}
 // Photo fitted into a box, sitting on the box's optical centre (a little above the middle).
 function plate(aspect, b, scale = 1, lift = 0.04) {
   const f = fit(aspect, b, scale);
@@ -173,12 +183,12 @@ export const LAYOUTS = {
   // Photo-book (monograph) layouts: built from the canon and conventions of printed photo books.
   tafel: {
     group: 'single', family: 'monograph', slots: 1,
-    build: (c) => [plate(c.aspects[0], canonBox(c.W, c.H, c.side))],
+    build: (c) => [plate(c.aspects[0], plateBox(c, c.aspects[0]))],
   },
   'tafel-legende': {
     group: 'single', family: 'monograph', slots: 1,
     build: (c) => {
-      const b = canonBox(c.W, c.H, c.side);
+      const b = plateBox(c, c.aspects[0]);
       const f = plate(c.aspects[0], { ...b, h: b.h * 0.9 }, 1, 0);
       return [f, txt(f.x, f.y + f.h + Math.max(3, c.g), Math.max(f.w, 40), Math.max(8, c.H / 18), 'caption')];
     },
@@ -328,7 +338,8 @@ export function buildFrames(ed, ownerIndex, aspectOf = () => null) {
   if (!p) return [];
   const L = LAYOUTS[p.layout] || LAYOUTS.leer;
   const spread = isSpreadPage(p);
-  const aspects = (p.slots || []).map((s) => (s?.key ? aspectOf(s.key) : null));
+  // A crop chosen for the photo (1:1, 4:5 …) wins over the photo's own aspect.
+  const aspects = (p.slots || []).map((s) => (s?.key ? (s.aspect > 0 ? s.aspect : aspectOf(s.key)) : null));
   const frames = L.build(layoutCtx(ed, ownerIndex, aspects, spread));
   let k = 0, t = 0;
   return frames.map((f) => (f.kind === 'image' ? { ...f, slot: k++ } : { ...f, text: t++ }));
@@ -353,6 +364,23 @@ export const COVER_LAYOUTS = {
   'cover-wrap': {
     slots: 1,
     build: (cs) => [img(0, 0, cs.W, cs.H), txt(cs.spine.x, cs.visible.y + 15, cs.spine.w, cs.visible.h - 30, 'spine')],
+  },
+  // Photo around the whole cover with the title on the front, low and to the left (reportage, cinematic).
+  'cover-wrap-title': {
+    slots: 1,
+    build: (cs) => {
+      const f = cs.front, v = cs.visible;
+      return [img(0, 0, cs.W, cs.H), txt(f.x + 18, v.y + v.h * 0.72, f.w - 36, v.h * 0.16, 'cover'), txt(cs.spine.x, v.y + 15, cs.spine.w, v.h - 30, 'spine')];
+    },
+  },
+  // Photo on the front with a large title on it; plain back with a text (backstage).
+  'cover-front-title': {
+    slots: 1,
+    build: (cs) => {
+      const fx = cs.front.x, fw = cs.front.w + cs.bleed, v = cs.visible;
+      return [img(fx, 0, fw, cs.H), txt(fx + 16, v.y + v.h * 0.58, cs.front.w - 32, v.h * 0.34, 'cover'), txt(cs.spine.x, v.y + 15, cs.spine.w, v.h - 30, 'spine'),
+        txt(cs.back.x + 15, v.y + v.h * 0.7, cs.back.w - 30, v.h * 0.2, 'back')];
+    },
   },
   'cover-passepartout': {
     slots: 1,
@@ -411,7 +439,7 @@ Object.assign(COVER_LAYOUTS, {
     },
   },
 });
-export const COVER_ORDER = ['cover-front', 'cover-wrap', 'cover-passepartout', 'cover-front-back', 'cover-plate', 'cover-year', 'cover-minimal', 'cover-typo'];
+export const COVER_ORDER = ['cover-front', 'cover-wrap', 'cover-wrap-title', 'cover-front-title', 'cover-passepartout', 'cover-front-back', 'cover-plate', 'cover-year', 'cover-minimal', 'cover-typo'];
 
 export function coverFrames(ed, aspectOf = () => null) {
   const cs = coverSpec(ed);

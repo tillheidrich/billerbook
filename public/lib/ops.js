@@ -234,7 +234,8 @@ export function updateSlot(project, edId, page, slot, patch) {
   const ed = getEdition(project, edId);
   const p = ed.pages[pageOwner(ed, page).owner];
   if (!p.slots[slot]) return;
-  Object.assign(p.slots[slot], patch);
+  // null (or undefined) removes a setting: JSON drops undefined, so MCP and API calls send null.
+  for (const [k, v] of Object.entries(patch || {})) { if (v == null) delete p.slots[slot][k]; else p.slots[slot][k] = v; }
 }
 
 export function setText(project, edId, page, idx, value) {
@@ -331,7 +332,7 @@ export function autoFill(project, edId, items, opts = {}) {
 
 // Applies a book template: font, text styles, page colour and graphic, cover design, page numbers.
 // The pages themselves stay; relayout (server side) refills them with the template's sequence.
-export function applyTemplate(project, edId, templateId) {
+export function applyTemplate(project, edId, templateId, opts = {}) {
   const ed = getEdition(project, edId);
   const tp = findTemplate(templateId);
   if (!tp) throw new Error(`unknown template: ${templateId}`);
@@ -346,9 +347,41 @@ export function applyTemplate(project, edId, templateId) {
   c.bg = tp.cover.bg;
   if (tp.cover.graphic) c.bgGraphic = { ...tp.cover.graphic }; else delete c.bgGraphic;
   ed.pageNumbers = tp.pageNumbers;
+  if (tp.fill?.gap != null) ed.gap = tp.fill.gap;
   ed.template = tp.id;
+  if (opts.restyle !== false) restyleForTemplate(ed, tp, opts.aspectOf);
   normalize(ed);
   return { template: tp.id, fill: tp.fill };
+}
+
+// Photo-book pages (plates, pauses, single-photo spreads) take the template's rhythm; grids, free
+// frames, text and chapter pages stay as they are. Templates with a tone apply it to every photo.
+const RESTYLE = {
+  reportage: { atem: 'tafel', 'atem-ecke': 'tafel', 'tafel-legende': 'tafel', 'dps-randlos-weiss': 'dps-voll', 'dps-tafel-rechts': 'dps-voll' },
+  chronik: { tafel: 'tafel-legende', atem: 'tafel-legende', 'atem-ecke': 'tafel-legende', einzeln: 'tafel-legende' },
+  kino: { atem: 'tafel', 'atem-ecke': 'atem', 'tafel-legende': 'tafel', 'dps-tafel-rechts': 'dps-randlos-weiss' },
+  strasse: { atem: 'voll', 'atem-ecke': 'voll', 'tafel-legende': 'tafel', 'dps-randlos-weiss': 'dps-voll', 'dps-tafel-rechts': 'dps-voll' },
+  backstage: { atem: 'tafel', 'atem-ecke': 'tafel', 'tafel-legende': 'tafel', 'dps-randlos-weiss': 'dps-voll', 'dps-tafel-rechts': 'dps-voll' },
+};
+export function restyleForTemplate(ed, tp, aspectOf = () => null) {
+  const map = RESTYLE[tp.fill?.rhythm];
+  const pageAspect = ed.w / ed.h;
+  let n = 0;
+  if (map) {
+    for (let i = 0; i < ed.pages.length; i++) {
+      const p = ed.pages[i];
+      if (p.spanned) continue;
+      let to = map[p.layout];
+      // Reportage, cinematic and backstage: plates whose photo has the page's shape go full bleed now and then.
+      if (p.layout === 'tafel' && ['reportage', 'kino', 'backstage', 'strasse'].includes(tp.fill.rhythm) && p.slots?.[0]?.key) {
+        const a = aspectOf(p.slots[0].key);
+        const every = ['backstage', 'strasse'].includes(tp.fill.rhythm) ? 2 : tp.fill.rhythm === 'kino' ? 3 : 6;
+        if (a && Math.abs(Math.log(a / pageAspect)) < 0.3 && ++n % every === 0) to = 'voll';
+      }
+      if (to) p.layout = to;
+    }
+  }
+  if (tp.fill?.tone) for (const sl of [...ed.pages.flatMap((p) => p.slots || []), ...(ed.coverDesign?.slots || [])]) if (sl?.key && !sl.tone) sl.tone = tp.fill.tone;
 }
 
 // Changing the cover layout keeps texts with their role (the spine text stays the spine text).
@@ -401,9 +434,27 @@ function monographFill(ed, items, opts, pageAspect) {
     if (opts.rightHand && (startIndex + out.length) % 2 === 1) out.push(newPage('leer', []));
     const a = it.w && it.h ? it.w / it.h : 1.5;
     const close = Math.abs(Math.log(a / pageAspect)) < 0.3;
+    const top = hi && (it.rating || 0) >= hi;
+    const left = (startIndex + out.length) % 2 === 1;
+    const wide = a > pageAspect * 1.15;
+    n++;
     let layout = 'tafel';
-    if (hi && (it.rating || 0) >= hi) layout = close ? 'voll' : 'tafel';
-    else if (++n % 5 === 0) layout = 'atem';
+    if (opts.rhythm === 'reportage') {
+      // Strong landscape photos run across the spread; every sixth photo full bleed.
+      if ((top || n % 6 === 0) && wide && left) { out.push(newPage('dps-voll', [{ key: it.key }]), newPage('leer', [])); continue; }
+      if (n % 6 === 0 && close) layout = 'voll';
+    } else if (opts.rhythm === 'strasse') {
+      if (wide && left && n % 2 === 1) { out.push(newPage('dps-voll', [{ key: it.key }]), newPage('leer', [])); continue; }
+      layout = close || top ? 'voll' : 'tafel';
+    } else if (opts.rhythm === 'chronik') {
+      layout = 'tafel-legende';
+    } else if (opts.rhythm === 'kino') {
+      // Full bleed on the left, white on the right with a small caption; often full bleed.
+      if (wide && left && n % 3 !== 0) { out.push(newPage('dps-randlos-weiss', [{ key: it.key }]), newPage('leer', [])); continue; }
+      if (top || (close && n % 2 === 0)) layout = 'voll';
+      else if (n % 7 === 0) layout = 'atem';
+    } else if (top) layout = close ? 'voll' : 'tafel';
+    else if (n % 5 === 0) layout = 'atem';
     out.push(newPage(layout, [{ key: it.key }]));
   }
   if (opts.replace) ed.pages = out;

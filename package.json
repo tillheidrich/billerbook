@@ -1,6 +1,6 @@
 {
   "name": "billerbook",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Open-source photo book layout for print: one photo pool, several editions of the same book, Lightroom Classic integration, print-ready PDFs for any print shop, an MCP server for AI assistants.",
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -13,7 +13,7 @@
     "dev": "node --watch server.mjs",
     "mcp": "node --disable-warning=ExperimentalWarning mcp.mjs",
     "app": "electron .",
-    "test": "node test/features.mjs && node --disable-warning=ExperimentalWarning test/run.mjs && node --disable-warning=ExperimentalWarning test/focal.mjs && node --disable-warning=ExperimentalWarning test/print.mjs && node --disable-warning=ExperimentalWarning test/v011.mjs && node --disable-warning=ExperimentalWarning test/oauth.mjs && node test/security.mjs && node --disable-warning=ExperimentalWarning test/printspec.mjs && node --disable-warning=ExperimentalWarning test/overview.mjs && node --disable-warning=ExperimentalWarning test/idml.mjs && node --disable-warning=ExperimentalWarning test/captureone.mjs && node --disable-warning=ExperimentalWarning test/lrexport.mjs && node --disable-warning=ExperimentalWarning test/order.mjs",
+    "test": "node test/features.mjs && node --disable-warning=ExperimentalWarning test/run.mjs && node --disable-warning=ExperimentalWarning test/focal.mjs && node --disable-warning=ExperimentalWarning test/print.mjs && node --disable-warning=ExperimentalWarning test/v011.mjs && node --disable-warning=ExperimentalWarning test/oauth.mjs && node test/security.mjs && node --disable-warning=ExperimentalWarning test/printspec.mjs && node --disable-warning=ExperimentalWarning test/overview.mjs && node --disable-warning=ExperimentalWarning test/idml.mjs && node --disable-warning=ExperimentalWarning test/captureone.mjs && node --disable-warning=ExperimentalWarning test/lrexport.mjs && node --disable-warning=ExperimentalWarning test/order.mjs && node test/crop.mjs && node test/styles.mjs",
     "dist:mac": "bash scripts/build-mac.sh",
     "release:mac": "bash scripts/build-mac.sh --publish"
   },

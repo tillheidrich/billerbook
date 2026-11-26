@@ -16,5 +16,5 @@ return {
     { title = LOC '$$$/Billerbook/Menu/ExportFile=Billerbook: export print files…', file = 'Export.lua' },
     { title = LOC '$$$/Billerbook/Menu/SyncFile=Billerbook: sync book collections now', file = 'SyncNow.lua' },
   },
-  VERSION = { major = 0, minor = 12, revision = 0, build = 1 },
+  VERSION = { major = 0, minor = 13, revision = 0, build = 1 },
 }

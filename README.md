@@ -20,11 +20,11 @@ Open source · macOS app · works with Lightroom Classic, Capture One or any fol
 
 **One photo pool, several books.** Make the big hardcover for yourself and a shorter portrait softcover for the family from the same photos. Every thumbnail shows which edition already uses it, and the *Missing here* filter lists what is still left out, so the year in photos is actually complete.
 
-**Templates that look like a real photo book.** Seven book templates set fonts, text styles, page colour, cover and the order of the pages in one step: *Monograph* (one photo per right page, the left page white), *Year book* (a chapter page per month), *Gallery*, *Botanical*, *Travel journal*, *Wedding* and a *Christmas year review* with an opening page for a personal line. The preview uses your own photos before you apply anything.
+**Templates that look like a real photo book.** Fifteen book templates set fonts, text styles, page colour, cover and the rhythm of the pages in one step. Monograph, Year book, Gallery, Botanical, Travel journal, Wedding and a Christmas year review; four in the manner of well-known photo books without copying any (Reportage, Chronicle, Cinematic, Backstage) plus Street; and the classic lab styles Classic photo book, Collage and Memory book. Apply one to a finished book and the photo-book pages take its rhythm while your grids and free frames stay; or let it lay out the pages again. The preview uses your own photos before you apply anything.
 
 **Layouts that adapt.** 32 page and spread layouts, all calculated from the page size. Copy a landscape hardcover into a portrait softcover and the pages re-flow instead of breaking. The auto grid keeps every photo's aspect ratio, so 3:2 photos are not squeezed into square templates.
 
-**Cropping without the fiddling.** Drag inside a photo to move the crop, scroll to zoom. `F` switches between *fill the frame* and *show the whole photo*. `V` turns a photo into a full-bleed page. `Space` tries the next arrangement for the same photos. Smart crop finds the subject (saliency detection) and centres it before you touch anything.
+**Cropping without the fiddling.** Pick a crop ratio like in Lightroom (original, 1:1, 4:5, 3:2, 16:9, panorama), drag inside a photo to move the crop, scroll to zoom. `F` switches between *fill the frame* and *show the whole photo*. `V` turns a photo into a full-bleed page. `Space` tries the next arrangement for the same photos. Smart crop finds the subject (saliency detection) and centres it before you touch anything. Portrait photos on landscape pages get the full page height.
 
 **Photo-book layouts.** Plates set in the Van de Graaf canon (inner and top margin one ninth of the page, outer and bottom two ninths), a small photo in a lot of white as a pause, a diptych across the gutter, a full-bleed left page next to a white right page, chapter openers. They follow the conventions of printed photo books, not of photo-lab templates.
 
@@ -65,6 +65,7 @@ Open source · macOS app · works with Lightroom Classic, Capture One or any fol
 | | |
 |---|---|
 | ![Overview of all spreads](docs/images/overview.jpg) | ![Cover with spine and turn-in](docs/images/cover.jpg) |
+| ![Crop ratio and tone for one photo](docs/images/crop.jpg) | ![Fifteen book templates with a preview from your own photos](docs/images/templates.jpg) |
 | ![Portrait softcover edition from the same photos](docs/images/softcover.jpg) | ![Export dialog](docs/images/export.jpg) |
 
 ## Print shops

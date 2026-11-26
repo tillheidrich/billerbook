@@ -49,6 +49,8 @@ function graphicEl(gfx, W, H, k, bg, inset) {
   if (svg) { svg.setAttribute('width', `${W * k}`); svg.setAttribute('height', `${H * k}`); }
   return el;
 }
+// Crop ratios like Lightroom's crop tool: '' keeps the photo's own aspect.
+const CROP_ASPECTS = [['', ''], ['1', '1 : 1'], ['0.8', '4 : 5'], ['0.6667', '2 : 3'], ['1.5', '3 : 2'], ['1.3333', '4 : 3'], ['1.7778', '16 : 9'], ['2', '2 : 1'], ['3', '3 : 1']];
 const aspectOf = (k) => { const it = S.poolMap.get(k); return it?.w ? it.w / it.h : null; };
 
 async function api(path, { method, body, raw } = {}) {
@@ -106,7 +108,7 @@ async function save() {
     setStatus(t('saved'));
     loadPreflight();
   } catch (e) {
-    if (e.status === 409) { await reloadProject(); toast('Projekt wurde extern geändert – neu geladen.'); }
+    if (e.status === 409) { await reloadProject(); toast(t('reloadedExternal')); }
     else setStatus(t('offline'));
   } finally { S.saving = false; }
 }
@@ -203,7 +205,7 @@ function renderTop() {
       class: 'ed-tab', role: 'tab', 'aria-selected': i === S.ed, style: { '--c': e.color },
       onclick: () => { S.ed = i; S.spread = Math.min(S.spread, spreadsOf(e.pages.length).length - 1); S.sel = null; renderAll(); loadPreflight(); },
       ondblclick: () => editionModal(e),
-    }, h('span', { class: 'dot' }), e.name, h('span', { class: 'meta num' }, `${e.pages.length} S.`)));
+    }, h('span', { class: 'dot' }), e.name, h('span', { class: 'meta num' }, t('pagesShort', { n: e.pages.length }))));
   });
   tabs.append(h('button', { class: 'ed-tab add', onclick: () => editionModal(null), title: t('newEdition') }, '+'));
   const views = $('#views'); views.innerHTML = '';
@@ -909,6 +911,8 @@ function renderFrameSection(el) {
       h('button', { 'aria-selected': s.fit === 'contain', onclick: () => upd({ fit: 'contain', zoom: 1, ox: 0, oy: 0 }) }, t('contain'))),
     h('label', { class: 'field' }, h('span', {}, `${t('zoom')} ${Math.round((s.zoom || 1) * 100)} %`),
       h('input', { type: 'range', min: 1, max: 4, step: 0.01, value: s.zoom || 1, disabled: s.fit === 'contain', onchange: (ev) => upd({ zoom: Number(ev.target.value) }) })),
+    h('label', { class: 'field' }, h('span', {}, t('cropAspect')), sel(CROP_ASPECTS.map(([v, l]) => [v, l || t('cropOriginal')]),
+      String(s.aspect || ''), (v) => upd({ aspect: v ? Number(v) : undefined, zoom: 1, ox: 0, oy: 0 }))),
     p.layout === 'frei' && f ? freeFrameFields(e, pageOwner(e, page).owner, f) : null,
     toneRow(s, (tone, strength) => mutate((pr) => ops.setTone(pr, e.id, { page }, slot, tone, strength))),
     h('div', { class: 'row' },

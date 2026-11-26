@@ -149,7 +149,9 @@ const OPS = {
 // in the template's sequence (chronological; all pool photos if the edition is still empty).
 function templateInto(p, args, pool) {
   const ed = ops.getEdition(p, args.edition);
-  const r = ops.applyTemplate(p, ed.id, args.template);
+  const aspectOf = (k) => { const it = pool.map.get(k); return it?.w && it?.h ? it.w / it.h : null; };
+  // With relayout the pages are built anew in the template's rhythm; without, existing photo-book pages are restyled.
+  const r = ops.applyTemplate(p, ed.id, args.template, { aspectOf, restyle: !args.relayout });
   if (!args.relayout) return r;
   const keys = [];
   for (const pg of ed.pages) for (const s of pg.slots || []) if (s?.key && !keys.includes(s.key)) keys.push(s.key);
@@ -159,6 +161,7 @@ function templateInto(p, args, pool) {
   ops.autoFill(p, ed.id, items, { ...r.fill, replace: true, highlightRating: 5, lang: args.lang || 'de' });
   if (r.fill.captions) ops.fillCaptions(p, ed.id, (k) => pool.map.get(k)?.caption || '');
   const tp = findTemplate(args.template);
+  if (tp.fill?.tone) ops.restyleForTemplate(ed, { fill: { tone: tp.fill.tone } });
   if (tp.intro) {
     // Opening page with a personal line, before the first chapter.
     const [title, line] = tp.intro[args.lang === 'en' ? 'en' : 'de'];

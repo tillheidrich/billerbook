@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.13.0 – 26 Nov 2026
+
+Book styles
+- Eight new templates, 15 in all. Four follow the look of well-known photo books without copying any: *Reportage* (black and white on charcoal paper, the strongest photos across the spread, titles in spaced capitals), *Chronicle* (white paper, a strong grotesque, place and date under every photo, a red accent), *Cinematic* (much full bleed, a full-bleed left page next to a white right page, light italics) and *Backstage* (big heavy type, tight grids, a chapter per day). *Street* is hard black and white, mostly full bleed. Three follow the usual lab photo books: *Classic photo book*, *Collage* and *Memory book*.
+- Applying a template without laying out again now also restyles photo-book pages (plates, pauses, single-photo spreads) in the template's rhythm; grids, free frames, text and chapter pages stay as they are, every photo stays in the book. The button says so: *Restyle, keep my pages*.
+- Two cover layouts with a title on the photo: wrap-around photo + title, photo on the front + big title.
+
+Cropping
+- Crop ratio per photo like Lightroom's crop tool: original, 1:1, 4:5, 2:3, 3:2, 4:3, 16:9, 2:1, 3:1. Layouts that follow the photos shape the frame to it; drag and zoom choose the part. MCP: `adjust_image` with `aspect`.
+- Portrait photos on landscape pages (and landscape photos on portrait pages) fill the page height instead of the canon block's two thirds.
+
+Fixes
+- The English interface had German left in two places (page count in the edition tab, a reload notice).
+- Thumbnails are written under a temporary name first, so a parallel request never reads a half-written file.
+- `adjust_image` can reset *fill* and the crop ratio (null now removes a setting).
+
 ## 0.12.0 – 26 Nov 2026
 
 From a full run with a real Lightroom Classic catalog (two yearly books of 241 pages, 10,700 photos of 2026).

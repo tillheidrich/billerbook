@@ -203,7 +203,8 @@ function book(provider = 'wmd', format = 'hc-a4-quer', pages = 4) {
   assert.ok(ed.pages.every((p, i) => (i % 2 === 1 ? p.layout === 'leer' : true)), 'left pages stay white');
   const plate = ed.pages.findIndex((p) => p.layout === 'tafel');
   const f = buildFrames(ed, plate, (k) => (pool.get(k).w / pool.get(k).h))[0];
-  assert.ok(f.x >= ed.w / 9 - 0.01 && f.y >= ed.h / 9 - 0.01 && f.x + f.w <= ed.w - ed.w / 9 + 0.01, 'plate inside the canon block');
+  // Canon margins along the photo's short side; across it the plate may grow to narrow margins (0.26: large portrait plates)
+  assert.ok(f.x >= ed.w * 0.07 - 0.01 && f.y >= ed.h * 0.06 - 0.01 && f.x + f.w <= ed.w - ed.w * 0.07 + 0.01 && f.y + f.h <= ed.h - ed.h * 0.09 + 0.01, 'plate inside the page margins');
   ok('monograph layouts sit in the canon block; monograph auto layout keeps photos on right pages');
 }
 
