@@ -6,7 +6,7 @@ import os, sys, html, shutil
 
 REPO = "https://github.com/tillheidrich/billerbook"
 DL = REPO + "/releases/latest"
-VERSION = "0.11.1"
+VERSION = "0.12.0"
 BASE = "https://billerbook.heidrich-digital.de/"
 
 ARROW = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>'
@@ -349,7 +349,7 @@ K = {
   tabs=[("lr", "Lightroom Classic"), ("c1", "Capture One"), ("folder", "Any folder"), ("web", "A web page")],
   panels={
    "lr": ("Lightroom · Greenhouses", [("Read", "Catalog opened read-only", "ok", "OK"), ("118", "Photos from two collections", "", "Pool"), ("Exports", "Full-size files matched by name", "ok", "118/118"), ("Book", "Book module book taken over, 24 pages", "", "Import")],
-          "Plug-in for Lightroom", "Shows which photos are in the book", "A collection per edition, and one with the photos still missing."),
+          "Plug-in for Lightroom", "Shows which photos are in the book", "A collection per edition, one with the photos still missing, and one menu item that exports the print files."),
    "c1": ("Capture One · Album Botanik", [("Album", "Read through AppleScript", "ok", "OK"), ("64", "Variants in the album", "", "Pool"), ("JPEG", "Processed files matched by name", "ok", "Matched"), ("RAW", "Waits until it is processed", "no", "Later")],
           "Mac only", "Capture One must be open", "Billerbook only reads. Edits stay in Capture One."),
    "folder": ("~/Pictures/Iceland 2026", [("142", "JPEG, TIFF, PNG, WebP or HEIC", "", "Pool"), ("Date", "Capture time from EXIF", "ok", "Sorted"), ("Stars", "Ratings from XMP", "ok", "Read"), ("Text", "Captions from IPTC", "ok", "Read")],
@@ -376,7 +376,8 @@ K = {
   off_svg=dict(photos="Your photos", photos2="Folder, Lightroom, Capture One", app="Billerbook", app2="on your Mac", pdf="Print PDFs", pdf2="Interior and cover", shop="Print shop", shop2="You upload", ai="AI assistant", ai2="Six-digit code, no file paths"),
   story_h="Why it exists",
   log_h="Release notes", log_sub="What changed lately. Every version is on GitHub with its download.",
-  log=[("0.11.1", "Fixes from an independent security review of the new import and export paths.", "2026-11-22"),
+  log=[("0.12.0", "Lightroom plug-in exports the print files itself, previews straight from RAW files, layout in the order of your Lightroom collection, drag photos onto any spread.", "2026-11-26"),
+       ("0.11.1", "Fixes from an independent security review of the new import and export paths.", "2026-11-22"),
        ("0.11.0", "208 formats, magazines, data-sheet setup, templates and fonts, IDML for Affinity and InDesign, Capture One, page overview, ChatGPT and claude.ai over OAuth.", "2026-11-22"),
        ("0.10.0", "Print shops worldwide, spreads export, cover templates, the Lightroom plug-in and the Book module's page tools.", "2026-11-21")],
   faq_h="Questions",
@@ -393,7 +394,7 @@ K = {
   how_h1="How a book comes together.", how_lead="From a folder of photos to the files your print shop asks for, in the order you work.",
   how_blocks=[
    ("Photos in", "From where they are.", "Billerbook reads photos where you keep them and never changes the originals.",
-    [("Any folder", "JPEG, TIFF, PNG, WebP, HEIC; date, stars and captions from the metadata."), ("Lightroom Classic", "Collections as the pool, previews for layout, full-size exports for print. Books from the Book module come over with their pages."), ("Capture One", "Albums, projects and groups of the open catalog or session; processed files are matched by name."), ("Web pages and PDFs", "A gallery page or an HTML file becomes chapters and plates; a PDF becomes pages.")]),
+    [("Any folder", "JPEG, TIFF, PNG, WebP, HEIC; date, stars and captions from the metadata."), ("Lightroom Classic", "Collections as the pool, in their Lightroom order, also a custom one. The plug-in exports full-size print files with your edits and later only what you changed. Books from the Book module come over with their pages."), ("Capture One", "Albums, projects and groups of the open catalog or session; processed files are matched by name."), ("Web pages and PDFs", "A gallery page or an HTML file becomes chapters and plates; a PDF becomes pages.")]),
    ("Layouts and templates", "Start from a style.", "Seven templates set fonts, colours, cover and page sequence: Monograph, Year book, Gallery, Botanical, Travel journal, Wedding and Christmas year review. After that, every page is yours.",
     [("Photo book layouts", "Plates on the Van de Graaf canon, chapter pages, text pages, diptychs and full-bleed spreads."), ("Free frames", "Move and size frames in millimetres, with snapping to thirds and the canon block."), ("Your layouts", "Save a page as a layout and use it on any page with the same number of photos."), ("Tones and graphics", "Black and white, four tones, paper textures and background graphics.")]),
    ("Editions", "Several books from one set of photos.", "A detailed landscape hardcover for you and a shorter portrait softcover for the family share the same photos. Each edition has its own print shop, format and page count, and layouts adapt when the format changes.", None),
@@ -456,7 +457,7 @@ K = {
   tabs=[("lr", "Lightroom Classic"), ("c1", "Capture One"), ("folder", "Ein Ordner"), ("web", "Eine Webseite")],
   panels={
    "lr": ("Lightroom · Gewächshäuser", [("Lesen", "Katalog nur lesend geöffnet", "ok", "OK"), ("118", "Fotos aus zwei Sammlungen", "", "Bestand"), ("Exporte", "Dateien in voller Größe über den Namen zugeordnet", "ok", "118/118"), ("Buch", "Buch aus dem Buch-Modul übernommen, 24 Seiten", "", "Import")],
-          "Plug-in für Lightroom", "Zeigt, welche Fotos im Buch sind", "Eine Sammlung je Edition und eine mit den Fotos, die noch fehlen."),
+          "Plug-in für Lightroom", "Zeigt, welche Fotos im Buch sind", "Eine Sammlung je Edition, eine mit den Fotos, die noch fehlen, und ein Menübefehl, der die Druckdateien exportiert."),
    "c1": ("Capture One · Album Botanik", [("Album", "Über AppleScript gelesen", "ok", "OK"), ("64", "Varianten im Album", "", "Bestand"), ("JPEG", "Verarbeitete Dateien über den Namen zugeordnet", "ok", "Zugeordnet"), ("RAW", "Wartet, bis es verarbeitet ist", "no", "Später")],
           "Nur am Mac", "Capture One muss offen sein", "Billerbook liest nur. Die Bearbeitung bleibt in Capture One."),
    "folder": ("~/Bilder/Island 2026", [("142", "JPEG, TIFF, PNG, WebP oder HEIC", "", "Bestand"), ("Datum", "Aufnahmezeit aus EXIF", "ok", "Sortiert"), ("Sterne", "Bewertungen aus XMP", "ok", "Gelesen"), ("Text", "Bildunterschriften aus IPTC", "ok", "Gelesen")],
@@ -483,7 +484,8 @@ K = {
   off_svg=dict(photos="Deine Fotos", photos2="Ordner, Lightroom, Capture One", app="Billerbook", app2="auf deinem Mac", pdf="Druck-PDFs", pdf2="Inhalt und Umschlag", shop="Druckerei", shop2="Du lädst hoch", ai="KI-Assistent", ai2="Sechsstelliger Code, keine Pfade"),
   story_h="Warum es das gibt",
   log_h="Was neu ist", log_sub="Die letzten Versionen. Jede steht mit Download auf GitHub.",
-  log=[("0.11.1", "Korrekturen aus einer unabhängigen Sicherheitsprüfung der neuen Import- und Exportwege.", "2026-11-22"),
+  log=[("0.12.0", "Das Lightroom-Plug-in exportiert die Druckdateien selbst, Vorschauen direkt aus RAW-Dateien, Gestaltung in der Reihenfolge deiner Lightroom-Sammlung, Fotos auf jede Doppelseite ziehen.", "2026-11-26"),
+       ("0.11.1", "Korrekturen aus einer unabhängigen Sicherheitsprüfung der neuen Import- und Exportwege.", "2026-11-22"),
        ("0.11.0", "208 Formate, Magazine, Einrichtung per Datenblatt, Vorlagen und Schriften, IDML für Affinity und InDesign, Capture One, Seitenübersicht, ChatGPT und claude.ai über OAuth.", "2026-11-22"),
        ("0.10.0", "Druckereien weltweit, Export als Doppelseiten, Umschlagvorlagen, das Lightroom-Plug-in und die Seitenwerkzeuge des Buch-Moduls.", "2026-11-21")],
   faq_h="Fragen",
@@ -499,7 +501,7 @@ K = {
   how_h1="So entsteht ein Buch.", how_lead="Vom Fotoordner bis zu den Dateien, die deine Druckerei verlangt, in der Reihenfolge, in der du arbeitest.",
   how_blocks=[
    ("Fotos rein", "Von dort, wo sie liegen.", "Billerbook liest die Fotos dort, wo du sie aufbewahrst, und verändert die Originale nie.",
-    [("Jeder Ordner", "JPEG, TIFF, PNG, WebP, HEIC; Datum, Sterne und Bildunterschriften aus den Metadaten."), ("Lightroom Classic", "Sammlungen als Bestand, Vorschauen zum Gestalten, Exporte in voller Größe für den Druck. Bücher aus dem Buch-Modul kommen mit ihren Seiten."), ("Capture One", "Alben, Projekte und Gruppen aus dem offenen Katalog oder der Session; verarbeitete Dateien werden über den Namen zugeordnet."), ("Webseiten und PDFs", "Eine Galerieseite oder HTML-Datei wird zu Kapiteln und Tafeln, ein PDF zu Seiten.")]),
+    [("Jeder Ordner", "JPEG, TIFF, PNG, WebP, HEIC; Datum, Sterne und Bildunterschriften aus den Metadaten."), ("Lightroom Classic", "Sammlungen als Bestand, in ihrer Lightroom-Reihenfolge, auch einer eigenen. Das Plug-in exportiert die Druckdateien in voller Größe mit deinen Entwicklungen und später nur, was du geändert hast. Bücher aus dem Buch-Modul kommen mit ihren Seiten."), ("Capture One", "Alben, Projekte und Gruppen aus dem offenen Katalog oder der Session; verarbeitete Dateien werden über den Namen zugeordnet."), ("Webseiten und PDFs", "Eine Galerieseite oder HTML-Datei wird zu Kapiteln und Tafeln, ein PDF zu Seiten.")]),
    ("Layouts und Vorlagen", "Mit einem Stil anfangen.", "Sieben Vorlagen setzen Schriften, Farben, Umschlag und Seitenfolge: Bildband, Jahresband, Galerie, Botanik, Reisetagebuch, Hochzeit und Jahresrückblick zu Weihnachten. Danach gehört jede Seite dir.",
     [("Fotobuch-Layouts", "Tafeln im Satzspiegel nach Van de Graaf, Kapitelseiten, Textseiten, Diptychen und randlose Doppelseiten."), ("Freie Rahmen", "Rahmen in Millimetern verschieben und skalieren, mit Einrasten an Dritteln und am Satzspiegel."), ("Eigene Layouts", "Eine Seite als Layout speichern und auf jede Seite mit gleich vielen Fotos setzen."), ("Tönungen und Grafiken", "Schwarzweiß, vier Tönungen, Papierstrukturen und Hintergrundgrafiken.")]),
    ("Editionen", "Mehrere Bücher aus denselben Fotos.", "Ein ausführliches Hardcover quer für dich und ein kürzeres Softcover hochkant für die Familie teilen sich die Fotos. Jede Edition hat ihre eigene Druckerei, ihr Format und ihre Seitenzahl, und die Layouts passen sich beim Formatwechsel an.", None),
