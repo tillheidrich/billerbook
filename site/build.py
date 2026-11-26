@@ -6,7 +6,7 @@ import os, sys, html, shutil
 
 REPO = "https://github.com/tillheidrich/billerbook"
 DL = REPO + "/releases/latest"
-VERSION = "0.13.0"
+VERSION = "0.13.1"
 BASE = "https://billerbook.heidrich-digital.de/"
 
 ARROW = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>'
@@ -36,7 +36,7 @@ T = {
    ("w5", "Ask your AI to build the book", "Billerbook includes an MCP server with 51 tools for Claude, ChatGPT, Codex or Cursor. Connect ChatGPT or claude.ai with a six-digit code from the app. The assistant reads a folder, a web page or your print shop's data sheet, sets up the print profile, lays out the book, looks at every spread as an image and fixes the ones that don't work. You check the result in the app.", None, "prompt"),
    ("w7", "Your print shop, its rules", "208 formats from Blurb, Amazon KDP, Lulu, IngramSpark, Mixam, Saal Digital, CEWE, WhiteWall, PrestoPhoto and WIRmachenDRUCK, plus standard photo book, book and magazine sizes and a special size for every binding. The spine width follows from page count and paper, using the printer's own formula or table. Hand your assistant the print shop's data sheet PDF and it sets up trim, bleed, cover and page rules from it. Magazines come with saddle stitching and a separate four-page cover if the printer wants one.", "app-printsettings.webp", None),
    ("w6", "In the book, and visible in Lightroom", "Billerbook reads your Lightroom Classic catalog and never writes to it, and lays out in the order of your collection, custom order included. The optional plug-in exports the print files with your edits, keeps a collection per edition in Lightroom and one with the photos still missing. Books from the Book module import with their pages, and the 240-page limit is gone: that one comes from Blurb, not from your book.", "app-overview-012.webp", None),
-   ("w6", "Fifteen book styles", "From a quiet monograph to loud backstage: Reportage in black and white on dark paper, Chronicle with place and date under every photo, Cinematic with lots of full bleed, Street, and the classic lab look. Apply one to a finished book and it takes the style while your own pages stay. Preview with your own photos first.", "app-templates-013.webp", None),
+   ("w6", "Fifteen book styles", "From a quiet monograph to loud backstage: Reportage in black and white on dark paper, Chronicle with place and date under every photo, Cinematic with lots of full bleed, Street, and the classic lab look. Apply one to a finished book and it takes the style while your own pages stay. Preview with your own photos first.", "app-templates-0131.webp", None),
    ("w6", "Everything the Book module does", "Duplicate pages, copy a layout to the next page or to every page with the same number of photos, save your own layouts, set a background photo with opacity, change margin and gap on one page, hide a page number.", "app-pagetools.webp", None),
    ("w6", "Cover with a real spine", "The cover is sized from page count and paper, including spine width, turn-in and hinge. Billerbook sets the title and spine text, and you can change both. Preflight warns about low resolution, the glue zone, page limits and an estimated spine before you pay.", "app-cover-012.webp", None),
   ],
@@ -122,7 +122,7 @@ T = {
    ("w5", "Lass deine KI das Buch bauen", "Billerbook bringt einen MCP-Server mit 51 Werkzeugen für Claude, ChatGPT, Codex oder Cursor mit. ChatGPT und claude.ai verbindest du mit einem sechsstelligen Code aus der App. Der Assistent liest einen Ordner, eine Webseite oder das Datenblatt deiner Druckerei, richtet das Druckprofil ein, legt das Buch an, sieht sich jede Doppelseite als Bild an und ändert die, die nicht funktionieren. Du prüfst das Ergebnis in der App.", None, "prompt"),
    ("w7", "Deine Druckerei, ihre Regeln", "208 Formate von WIRmachenDRUCK, Saal Digital, CEWE, WhiteWall, Blurb, Amazon KDP, Lulu, IngramSpark, Mixam und PrestoPhoto, dazu gängige Fotobuch-, Buch- und Magazinformate und ein Sonderformat für jede Bindung. Die Rückenbreite folgt aus Seitenzahl und Papier, nach Formel oder Tabelle der Druckerei. Gib deinem Assistenten das Datenblatt der Druckerei als PDF, dann richtet er Endformat, Beschnitt, Umschlag und Seitenregeln danach ein. Magazine gibt es mit Rückendrahtheftung und auf Wunsch mit separatem vierseitigem Umschlag.", "app-printsettings.webp", None),
    ("w6", "Im Buch, und in Lightroom sichtbar", "Billerbook liest deinen Lightroom-Classic-Katalog, schreibt nie hinein und gestaltet in der Reihenfolge deiner Sammlung, auch einer eigenen. Das Plug-in exportiert die Druckdateien mit deinen Entwicklungen, legt eine Sammlung je Edition an und eine mit den Fotos, die noch fehlen. Bücher aus dem Buch-Modul kommen samt Seiten mit, und die 240-Seiten-Grenze fällt weg: Die kommt von Blurb, nicht von deinem Buch.", "app-overview-012.webp", None),
-   ("w6", "Fünfzehn Buchstile", "Von der ruhigen Monografie bis Backstage: Reportage in Schwarzweiß auf dunklem Papier, Zeitdokument mit Ort und Datum unter jedem Foto, Kinematisch mit viel Randlosem, Straße und der klassische Fotobuch-Look. Auf ein fertiges Buch angewendet übernimmt es den Stil, deine eigenen Seiten bleiben. Vorher mit deinen Fotos ansehen.", "app-templates-013.webp", None),
+   ("w6", "Fünfzehn Buchstile", "Von der ruhigen Monografie bis Backstage: Reportage in Schwarzweiß auf dunklem Papier, Zeitdokument mit Ort und Datum unter jedem Foto, Kinematisch mit viel Randlosem, Straße und der klassische Fotobuch-Look. Auf ein fertiges Buch angewendet übernimmt es den Stil, deine eigenen Seiten bleiben. Vorher mit deinen Fotos ansehen.", "app-templates-0131.webp", None),
    ("w6", "Alles, was das Buch-Modul kann", "Seiten duplizieren, ein Layout auf die nächste Seite oder alle Seiten mit gleich vielen Fotos übertragen, eigene Layouts speichern, Hintergrundfoto mit Deckkraft, Rand und Abstand je Seite, Seitenzahl ausblenden.", "app-pagetools.webp", None),
    ("w6", "Umschlag mit echtem Buchrücken", "Der Umschlag wird aus Seitenzahl und Papier berechnet, mit Rückenbreite, Einschlag und Falz. Billerbook setzt Titel und Rückentext, du kannst beides ändern. Die Prüfung meldet zu geringe Auflösung, die Klebezone, Seitengrenzen und einen geschätzten Rücken, bevor du bezahlst.", "app-cover-012.webp", None),
   ],
@@ -361,7 +361,7 @@ K = {
    "web": ("tillheidrich.de · 22 galleries", [("22", "Gallery pages read", "ok", "OK"), ("8", "Photos per garden, evenly spread", "", "Picked"), ("H1", "Titles became chapter pages", "ok", "Chapters"), ("Text", "Paragraphs became text pages", "", "Pages")],
           "How the example book was made", "A website in, a book out", "Botanical Stories came from 22 galleries in one import."),
   },
-  notes=[("Several editions.", "A big landscape hardcover and a short portrait softcover from the same photos."), ("Crop like Lightroom.", "Square, 4:5, 3:2, 16:9 or panorama per photo; Billerbook finds the subject and crops around it."), ("Captions.", "From the photo's metadata, editable on the page."), ("Your fonts.", "Nine open-licence typefaces built in, your own TTF or OTF on top.")],
+  notes=[("Several editions.", "A big landscape hardcover and a short portrait softcover from the same photos."), ("Crop like Lightroom.", "Square, 4:5, 3:2, 16:9 or panorama per photo; Billerbook finds the subject and crops around it."), ("Captions.", "From the photo's metadata, editable on the page."), ("Your fonts.", "Nine open-licence typefaces built in, plus any font installed on your Mac or your own TTF or OTF.")],
   steps_h="From folder to print shop", steps_h2="in an afternoon.",
   steps_cta="Download Billerbook",
   steps=[("Add photos.", "A folder, a Lightroom collection, a Capture One album or a web page."), ("Pick the print shop.", "Format, paper and binding; the spine follows from the page count."),
@@ -380,7 +380,8 @@ K = {
   off_svg=dict(photos="Your photos", photos2="Folder, Lightroom, Capture One", app="Billerbook", app2="on your Mac", pdf="Print PDFs", pdf2="Interior and cover", shop="Print shop", shop2="You upload", ai="AI assistant", ai2="Six-digit code, no file paths"),
   story_h="Why it exists",
   log_h="Release notes", log_sub="What changed lately. Every version is on GitHub with its download.",
-  log=[("0.13.0", "Fifteen book styles, four of them in the manner of well-known photo books, crop ratios like in Lightroom, portrait photos at full page height.", "2026-11-26"),
+  log=[("0.13.1", "Any font installed on your Mac, Helvetica and Avenir included; fonts and styles from the page panel.", "2026-11-26"),
+       ("0.13.0", "Fifteen book styles, four of them in the manner of well-known photo books, crop ratios like in Lightroom, portrait photos at full page height.", "2026-11-26"),
        ("0.12.0", "Lightroom plug-in exports the print files itself, previews straight from RAW files, layout in the order of your Lightroom collection, drag photos onto any spread.", "2026-11-26"),
        ("0.11.1", "Fixes from an independent security review of the new import and export paths.", "2026-11-22"),
        ("0.11.0", "208 formats, magazines, data-sheet setup, templates and fonts, IDML for Affinity and InDesign, Capture One, page overview, ChatGPT and claude.ai over OAuth.", "2026-11-22"),
@@ -470,7 +471,7 @@ K = {
    "web": ("tillheidrich.de · 22 Galerien", [("22", "Galerieseiten gelesen", "ok", "OK"), ("8", "Fotos je Garten, gleichmäßig verteilt", "", "Gewählt"), ("H1", "Titel wurden Kapitelseiten", "ok", "Kapitel"), ("Text", "Absätze wurden Textseiten", "", "Seiten")],
           "So entstand das Beispielbuch", "Eine Website rein, ein Buch raus", "Botanical Stories kam in einem Import aus 22 Galerien."),
   },
-  notes=[("Mehrere Editionen.", "Ein großes Hardcover quer und ein kurzes Softcover hochkant aus denselben Fotos."), ("Zuschnitt wie in Lightroom.", "Quadratisch, 4:5, 3:2, 16:9 oder Panorama pro Foto; Billerbook findet das Motiv und schneidet darum herum zu."), ("Bildunterschriften.", "Aus den Metadaten der Fotos, auf der Seite änderbar."), ("Deine Schriften.", "Neun freie Schriften eingebaut, eigene TTF oder OTF dazu.")],
+  notes=[("Mehrere Editionen.", "Ein großes Hardcover quer und ein kurzes Softcover hochkant aus denselben Fotos."), ("Zuschnitt wie in Lightroom.", "Quadratisch, 4:5, 3:2, 16:9 oder Panorama pro Foto; Billerbook findet das Motiv und schneidet darum herum zu."), ("Bildunterschriften.", "Aus den Metadaten der Fotos, auf der Seite änderbar."), ("Deine Schriften.", "Neun freie Schriften eingebaut, dazu jede Schrift auf deinem Mac oder eigene TTF und OTF.")],
   steps_h="Vom Ordner zur Druckerei", steps_h2="an einem Nachmittag.",
   steps_cta="Billerbook laden",
   steps=[("Fotos holen.", "Ein Ordner, eine Lightroom-Sammlung, ein Capture-One-Album oder eine Webseite."), ("Druckerei wählen.", "Format, Papier und Bindung; der Rücken folgt aus der Seitenzahl."),
@@ -489,7 +490,8 @@ K = {
   off_svg=dict(photos="Deine Fotos", photos2="Ordner, Lightroom, Capture One", app="Billerbook", app2="auf deinem Mac", pdf="Druck-PDFs", pdf2="Inhalt und Umschlag", shop="Druckerei", shop2="Du lädst hoch", ai="KI-Assistent", ai2="Sechsstelliger Code, keine Pfade"),
   story_h="Warum es das gibt",
   log_h="Was neu ist", log_sub="Die letzten Versionen. Jede steht mit Download auf GitHub.",
-  log=[("0.13.0", "Fünfzehn Buchstile, vier davon im Stil bekannter Fotobücher, Zuschnitt mit Seitenverhältnis wie in Lightroom, Hochformate in voller Seitenhöhe.", "2026-11-26"),
+  log=[("0.13.1", "Jede Schrift auf deinem Mac, auch Helvetica und Avenir; Schriften und Stile direkt in den Seiteneinstellungen.", "2026-11-26"),
+       ("0.13.0", "Fünfzehn Buchstile, vier davon im Stil bekannter Fotobücher, Zuschnitt mit Seitenverhältnis wie in Lightroom, Hochformate in voller Seitenhöhe.", "2026-11-26"),
        ("0.12.0", "Das Lightroom-Plug-in exportiert die Druckdateien selbst, Vorschauen direkt aus RAW-Dateien, Gestaltung in der Reihenfolge deiner Lightroom-Sammlung, Fotos auf jede Doppelseite ziehen.", "2026-11-26"),
        ("0.11.1", "Korrekturen aus einer unabhängigen Sicherheitsprüfung der neuen Import- und Exportwege.", "2026-11-22"),
        ("0.11.0", "208 Formate, Magazine, Einrichtung per Datenblatt, Vorlagen und Schriften, IDML für Affinity und InDesign, Capture One, Seitenübersicht, ChatGPT und claude.ai über OAuth.", "2026-11-22"),
@@ -810,7 +812,7 @@ def how_page(t):
         if items:
             right = '<ul class="ticks">' + "".join(f'<li><b>{esc(x)}.</b> {esc(y)}</li>' for x, y in items) + '</ul>'
             if n == 1:
-                right += f'<figure class="ovfig u-mt36"><img src="{root}assets/img/app-templates-013.webp" width="2000" height="1250" alt="{"The template picker with fifteen styles and a preview from your own photos" if en else "Die Vorlagenauswahl mit fünfzehn Stilen und einer Vorschau aus deinen Fotos"}" loading="lazy"></figure>'
+                right += f'<figure class="ovfig u-mt36"><img src="{root}assets/img/app-templates-0131.webp" width="2000" height="1250" alt="{"The template picker with fifteen styles and a preview from your own photos" if en else "Die Vorlagenauswahl mit fünfzehn Stilen und einer Vorschau aus deinen Fotos"}" loading="lazy"></figure>'
                 right += f'<figure class="ovfig u-mt36"><img src="{root}assets/img/app-editor-012.webp" width="2000" height="1250" alt="{"A portrait plate at full page height, crop ratio and tone in the inspector" if en else "Ein Hochformat in voller Seitenhöhe, Zuschnitt und Tonung im Inspektor"}" loading="lazy"></figure>'
         elif n == 2:
             right = f'<div class="u-stack"><figure class="proof"><span class="cm"></span><img src="{root}assets/img/hc-spread-1.webp" width="2000" height="707" alt="{"Landscape hardcover spread" if en else "Doppelseite Hardcover quer"}" loading="lazy"><figcaption>{t["ed_caps"][0]}</figcaption></figure><figure class="proof u-w70"><span class="cm"></span><img src="{root}assets/img/sc-spread-2.webp" width="1400" height="990" alt="{"Portrait softcover spread with the same photos" if en else "Softcover-Doppelseite hochkant mit denselben Fotos"}" loading="lazy"><figcaption>{t["ed_caps"][1]}</figcaption></figure></div>'

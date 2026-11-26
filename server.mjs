@@ -23,7 +23,7 @@ import { exportIdml } from './lib/idml.mjs';
 import { listCaptureOneCollections, captureOneVariants, PRINTABLE as C1_PRINTABLE } from './lib/captureone.mjs';
 import { extraChecks } from './lib/checks.mjs';
 import { exportImages, exportCarousel, exportEpub, writeFileList, collectOriginals, usedFiles, exportHtml, exportCbz, subsetEdition } from './lib/exports.mjs';
-import { FONT_DIR, inspectFontFile, textFrameCommands, svgPath } from './lib/fonts.mjs';
+import { FONT_DIR, inspectFontFile, readFontBuffer, systemFonts, systemFontDirs, textFrameCommands, svgPath } from './lib/fonts.mjs';
 import { fontFaceCss, allFamilies, STYLE_PRESETS, resolveStyle } from './public/lib/text.js';
 import { GRAPHICS } from './public/lib/graphics.js';
 import { TEMPLATES, findTemplate } from './public/lib/templates.js';
@@ -124,17 +124,22 @@ const OPS = {
     const files = Array.isArray(a.paths) ? a.paths : [a.path];
     const added = [];
     for (const f of files) {
-      if (!/\.(ttf|otf|woff)$/i.test(String(f))) throw httpError(400, 'font files: .ttf, .otf or .woff');
-      const info = inspectFontFile(f);
+      if (!/\.(ttf|otf|woff)$/i.test(String(f)) && !/\.(ttc|otc)#\d+$/i.test(String(f))) throw httpError(400, 'font files: .ttf, .otf, .woff or a font of a .ttc collection');
+      let info;
+      try { info = inspectFontFile(f); } catch { throw httpError(400, 'not a readable font'); }
       const id = slug(info.family).toLowerCase();
       const dir = path.join(DATA, 'fonts', id);
       fs.mkdirSync(dir, { recursive: true });
       const key = `${info.weight}-${info.italic ? 'italic' : 'normal'}`;
-      const dest = path.join(dir, `${key}${path.extname(f).toLowerCase()}`);
-      fs.copyFileSync(f, dest);
+      // A font from a collection is written out as a standalone file.
+      const coll = /\.(ttc|otc)#\d+$/i.test(String(f));
+      const dest = path.join(dir, `${key}${coll ? '.ttf' : path.extname(f).toLowerCase()}`);
+      if (coll) fs.writeFileSync(dest, readFontBuffer(f)); else fs.copyFileSync(f, dest);
       p.fonts ||= [];
       let fam = p.fonts.find((x) => x.id === id);
       if (!fam) { fam = { id, name: info.family, files: {} }; p.fonts.push(fam); }
+      // Installed fonts are licensed to this computer: used for the book, never packed into a project file.
+      if (systemFontDirs().some((d) => String(f).startsWith(d + path.sep))) fam.system = true;
       fam.files[key] = dest;
       added.push({ family: `custom:${id}`, name: info.family, style: key });
     }
@@ -503,6 +508,8 @@ async function route(req, res) {
   if (p === '/api/profiles' && req.method === 'POST') { const pr = saveProfile(await body(req)); broadcast({ type: 'profiles' }); return json(res, pr); }
   if ((m = p.match(/^\/api\/profiles\/([\w-]+)$/)) && req.method === 'DELETE') { deleteProfile(m[1]); broadcast({ type: 'profiles' }); return json(res, { ok: true }); }
   // Lightroom plug-in: which photos are in which edition (Lightroom ids and file paths).
+  // Fonts installed on this computer (local app only; the public address never reaches this route).
+  if (p === '/api/system-fonts') return json(res, systemFonts({ refresh: url.searchParams.get('refresh') === '1' }).map((f) => ({ family: f.family, styles: f.styles })));
   if (p === '/api/lightroom/usage') return json(res, await lightroomUsage());
   // Same data as tab-separated lines, easy to parse in Lightroom's Lua: H hash, E project edition id, I lr-uuid, F path, M missing lr-uuid
   if (p === '/api/lightroom/usage.txt') {

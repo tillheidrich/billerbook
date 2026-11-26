@@ -154,7 +154,7 @@ export const TEMPLATES = [
     font: 'archivo',
     styles: {
       cover: { size: 72, weight: 700, caps: true, tracking: -40, color: '#ffffff', align: 'left' }, title: { size: 34, weight: 700, caps: true, tracking: -30, align: 'left' },
-      chapter: { size: 88, weight: 700, tracking: -50, color: '#141414', align: 'left' }, caption: { size: 7.5, weight: 700, caps: true, tracking: 60, color: '#141414', align: 'left' },
+      chapter: { size: 64, weight: 700, tracking: -40, color: '#141414', align: 'left' }, caption: { size: 7.5, weight: 700, caps: true, tracking: 60, color: '#141414', align: 'left' },
       body: { size: 9.5, leading: 1.35, weight: 500 }, spine: { size: 11, weight: 700, caps: true, tracking: 0 },
     },
     page: { bg: '#ffffff' },

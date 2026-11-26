@@ -354,3 +354,6 @@ img.bgthumb{width:48px;height:32px;object-fit:cover;border-radius:3px}
 .tpl-view { display: grid; gap: var(--s2); }
 .tpl-imgs { display: grid; gap: var(--s2); }
 .tpl-prev { width: 100%; border-radius: 4px; background: var(--ink-2); min-height: 120px; box-shadow: var(--stage-shadow); }
+.sysfonts { max-height: 420px; margin-top: 10px; }
+.sysfonts .row { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+.sysfonts .small { font-size: 11px; }

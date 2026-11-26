@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.1 – 26 Nov 2026
+
+Fonts and colours
+- *Font from this Mac*: every installed font in a searchable list, system fonts like Helvetica, Avenir Next or Futura included, all styles of a family added at once. Font collections (.ttc) are split into single fonts; Mac fonts whose character map the text engine could not read now work. Fonts installed on the computer are not packed into project files you pass on (licence); the PDF has text as outlines either way.
+- *Fonts & styles…* is now also in the page panel, not only when a text is selected. Colours for pages, every text style, graphics and the cover were there already.
+- Style and weight of a font are read from the font's own flags, so italic cuts are no longer taken for regular ones.
+
+Fixes
+- Backstage: smaller chapter titles so three lines no longer run into the caption.
+- `updateSlot` ignores prototype keys in a patch.
+
 ## 0.13.0 – 26 Nov 2026
 
 Book styles

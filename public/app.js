@@ -839,6 +839,7 @@ function renderInspector() {
       h('h3', {}, t('layout'), h('span', {}, `${title} · ${tl(p.layout)}`)), lays,
       h('div', { class: 'row between' }, h('span', { class: 'muted' }, t('background')),
         h('input', { class: 'input', type: 'color', value: p.bg || e.bg || '#ffffff', style: { width: '60px' }, onchange: (ev) => mutate((pr) => ops.setPageProps(pr, e.id, own.owner, { bg: ev.target.value })) })),
+      h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => stylesModal() }, t('fontsAndStyles'))),
       h('div', { class: 'row' },
         h('button', { class: 'btn small', title: 'Space', onclick: () => mutate((pr) => ops.shuffleLayout(pr, e.id, own.owner)) }, `⟳ ${t('shuffle')}`),
         p.layout !== 'frei' ? h('button', { class: 'btn small', onclick: () => mutate((pr) => ops.toFreeLayout(pr, e.id, own.owner, aspectOf)) }, t('freeEdit')) : null,
@@ -1087,7 +1088,14 @@ function stylesModal() {
               $('#fontcss').href = `/api/fonts.css?p=${S.project.id}&v=${Date.now()}`;
               toast(t('fontAdded', { name: r.result.added[0]?.name || '' })); draw(); renderAll();
             } catch (err) { toast(err.message); }
-          } }, `+ ${t('addFont')}`)),
+          } }, `+ ${t('addFont')}`),
+          h('button', { class: 'btn small', onclick: () => systemFontsModal(async (paths) => {
+            if (S.pendingSave) await save();
+            const r = await api(`/api/project/${S.project.id}/op`, { body: { op: 'addFont', args: { paths } } });
+            S.project = r.project; S.catalog = await api(`/api/design-catalog?p=${S.project.id}`);
+            $('#fontcss').href = `/api/fonts.css?p=${S.project.id}&v=${Date.now()}`;
+            toast(t('fontAdded', { name: r.result.added[0]?.name || '' })); draw(); renderAll();
+          }) }, `+ ${t('macFonts')}`)),
         h('small', { class: 'muted' }, t('fontNote')));
     };
     draw();
@@ -1421,6 +1429,33 @@ function editionModal(existing) {
 // A selection is laid out in the chosen order, not in the order the photos were clicked.
 function orderedSelection(order) {
   return ops.orderItems(S.pool.filter((it) => S.poolSel.has(it.key)), order).map((it) => it.key);
+}
+
+// Fonts installed on this computer: search, pick a family, all its styles are added to the project.
+function systemFontsModal(onPick) {
+  modal((close) => {
+    const list = h('div', { class: 'list sysfonts' }, h('small', { class: 'muted' }, t('loading')));
+    const search = h('input', { class: 'input', type: 'search', placeholder: t('search'), autofocus: true });
+    let all = [];
+    const draw = () => {
+      const q = search.value.trim().toLowerCase();
+      list.innerHTML = '';
+      const hits = all.filter((f) => !q || f.family.toLowerCase().includes(q)).slice(0, 200);
+      if (!hits.length) list.append(h('small', { class: 'muted' }, t('noFonts')));
+      for (const f of hits) {
+        const styles = f.styles.map((x) => `${x.weight}${x.italic ? 'i' : ''}`).join(' · ');
+        list.append(h('div', { class: 'row between' }, h('div', {}, h('b', {}, f.family), h('div', { class: 'muted small' }, styles)),
+          h('button', { class: 'btn small', onclick: async (ev) => {
+            ev.target.disabled = true;
+            try { await onPick(f.styles.map((x) => x.path)); close(); } catch (err) { toast(err.message); ev.target.disabled = false; }
+          } }, t('add'))));
+      }
+    };
+    search.addEventListener('input', draw);
+    api('/api/system-fonts').then((r) => { all = r; draw(); }).catch((err) => { list.innerHTML = ''; list.append(h('small', { class: 'muted' }, err.message)); });
+    return [h('h2', {}, t('macFonts')), h('p', { class: 'muted' }, t('macFontsNote')), search, list,
+      h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('close')))];
+  }, { wide: true });
 }
 
 function autoModal() {
