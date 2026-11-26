@@ -6,7 +6,7 @@ import os, sys, html, shutil
 
 REPO = "https://github.com/tillheidrich/billerbook"
 DL = REPO + "/releases/latest"
-VERSION = "0.13.1"
+VERSION = "0.13.2"
 BASE = "https://billerbook.heidrich-digital.de/"
 
 ARROW = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>'
@@ -386,7 +386,8 @@ K = {
   off_svg=dict(photos="Your photos", photos2="Folder, Lightroom, Capture One", app="Billerbook", app2="on your Mac", pdf="Print PDFs", pdf2="Interior and cover", shop="Print shop", shop2="You upload", ai="AI assistant", ai2="Six-digit code, no file paths"),
   story_h="Why it exists",
   log_h="Release notes", log_sub="What changed lately. Every version is on GitHub with its download.",
-  log=[("0.13.1", "Any font installed on your Mac, Helvetica and Avenir included; fonts and styles from the page panel.", "2026-11-26"),
+  log=[("0.13.2", "Fixes a start error of the Mac app on first launch.", "2026-11-26"),
+       ("0.13.1", "Any font installed on your Mac, Helvetica and Avenir included; fonts and styles from the page panel.", "2026-11-26"),
        ("0.13.0", "Fifteen book styles, four of them in the manner of well-known photo books, crop ratios like in Lightroom, portrait photos at full page height.", "2026-11-26"),
        ("0.12.0", "Lightroom plug-in exports the print files itself, previews straight from RAW files, layout in the order of your Lightroom collection, drag photos onto any spread.", "2026-11-26"),
        ("0.11.1", "Fixes from an independent security review of the new import and export paths.", "2026-11-22"),
@@ -496,7 +497,8 @@ K = {
   off_svg=dict(photos="Deine Fotos", photos2="Ordner, Lightroom, Capture One", app="Billerbook", app2="auf deinem Mac", pdf="Druck-PDFs", pdf2="Inhalt und Umschlag", shop="Druckerei", shop2="Du lädst hoch", ai="KI-Assistent", ai2="Sechsstelliger Code, keine Pfade"),
   story_h="Warum es das gibt",
   log_h="Was neu ist", log_sub="Die letzten Versionen. Jede steht mit Download auf GitHub.",
-  log=[("0.13.1", "Jede Schrift auf deinem Mac, auch Helvetica und Avenir; Schriften und Stile direkt in den Seiteneinstellungen.", "2026-11-26"),
+  log=[("0.13.2", "Behebt einen Startfehler der Mac-App beim ersten Öffnen.", "2026-11-26"),
+       ("0.13.1", "Jede Schrift auf deinem Mac, auch Helvetica und Avenir; Schriften und Stile direkt in den Seiteneinstellungen.", "2026-11-26"),
        ("0.13.0", "Fünfzehn Buchstile, vier davon im Stil bekannter Fotobücher, Zuschnitt mit Seitenverhältnis wie in Lightroom, Hochformate in voller Seitenhöhe.", "2026-11-26"),
        ("0.12.0", "Das Lightroom-Plug-in exportiert die Druckdateien selbst, Vorschauen direkt aus RAW-Dateien, Gestaltung in der Reihenfolge deiner Lightroom-Sammlung, Fotos auf jede Doppelseite ziehen.", "2026-11-26"),
        ("0.11.1", "Korrekturen aus einer unabhängigen Sicherheitsprüfung der neuen Import- und Exportwege.", "2026-11-22"),

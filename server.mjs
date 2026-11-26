@@ -898,6 +898,9 @@ export function start({ port = PORT, open = false } = {}) {
   });
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Started directly (node server.mjs), not imported by the Mac app. In the packaged app
+// process.argv[1] is undefined, because Electron starts without a script argument.
+const entry = (() => { try { return process.argv[1] ? pathToFileURL(fs.realpathSync(process.argv[1])).href : ''; } catch { return ''; } })();
+if (import.meta.url === entry) {
   start({ open: process.argv.includes('--open') }).catch((e) => { log(e.message); process.exit(1); });
 }

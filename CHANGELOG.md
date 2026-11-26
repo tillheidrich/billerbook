@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.2 – 26 Nov 2026
+
+Fixes
+- The Mac app no longer fails to start with "The \"path\" argument must be of type string" when no other Billerbook server is running (first start after installing). The app imports the server without a script argument; the check for a direct start now handles that. New test `test/startup.mjs`.
+
 ## 0.13.1 – 26 Nov 2026
 
 Fonts and colours
