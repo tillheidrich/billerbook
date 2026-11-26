@@ -1435,7 +1435,7 @@ function autoModal() {
       h('label', { class: 'field' }, h('span', {}, t('which')), sel([['unplaced', t('onlyUnplaced')], ['nowhere', t('onlyNowhere')], ['all', t('allImages')]], o.filter, (v) => { o.filter = v; })),
       h('label', { class: 'field' }, h('span', {}, t('minStars')), sel([[0, '–'], [1, '★'], [2, '★★'], [3, '★★★'], [4, '★★★★'], [5, '★★★★★']], o.minRating, (v) => { o.minRating = Number(v); }))),
     h('label', { class: 'field' }, h('span', {}, t('breakGaps')), h('input', { class: 'input num', type: 'number', min: 0, value: o.breakHours, onchange: (ev) => { o.breakHours = Number(ev.target.value); } })),
-    S.poolSel.size > 1 ? h('small', { class: 'muted' }, `${S.poolSel.size} ausgewählt → nur diese`) : null,
+    S.poolSel.size > 1 ? h('small', { class: 'muted' }, t('onlySelected', { n: S.poolSel.size })) : null,
     h('label', { class: 'row' }, h('input', { type: 'checkbox', onchange: (ev) => { o.replace = ev.target.checked; } }), t('replacePages')),
     h('div', { class: 'foot' }, h('button', { class: 'btn', onclick: close }, t('cancel')),
       h('button', { class: 'btn primary', onclick: async () => {
